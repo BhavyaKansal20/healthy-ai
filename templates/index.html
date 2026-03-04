@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% block title %}Healthy AI - Advanced Health Prediction Platform{% endblock %}
+{% block content %}
+
+<!-- Hero -->
+<section style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:60px 40px;text-align:center;position:relative;">
+  <div style="max-width:900px;">
+    <div class="section-tag"><i class="fas fa-brain"></i> AI-Powered Health Intelligence</div>
+    <h1 style="font-size:clamp(2.5rem,6vw,5rem);font-weight:800;line-height:1.1;margin-bottom:24px;">
+      Predict Your Health
+      <span style="display:block;background:linear-gradient(135deg,var(--cyan),var(--purple),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+        Before It's Too Late
+      </span>
+    </h1>
+    <p style="font-size:1.15rem;color:var(--muted);max-width:600px;margin:0 auto 40px;line-height:1.7;">
+      Advanced machine learning models trained on thousands of patient records to detect 
+      <strong style="color:var(--text)">Heart Disease</strong> and <strong style="color:var(--text)">Diabetes</strong> risk 
+      with clinical-grade accuracy.
+    </p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+      {% if user %}
+        <a href="/predict/heart" class="btn btn-primary" style="font-size:1.05rem;padding:16px 36px;">
+          <i class="fas fa-heartbeat"></i> Heart Disease Detection
+        </a>
+        <a href="/predict/diabetes" class="btn btn-cyan" style="font-size:1.05rem;padding:16px 36px;">
+          <i class="fas fa-syringe"></i> Diabetes Detection
+        </a>
+      {% else %}
+        <a href="#" onclick="openModal('registerModal')" class="btn btn-primary" style="font-size:1.05rem;padding:16px 36px;">
+          <i class="fas fa-rocket"></i> Get Started Free
+        </a>
+        <a href="#features" class="btn btn-glass" style="font-size:1.05rem;padding:16px 36px;">
+          <i class="fas fa-info-circle"></i> Learn More
+        </a>
+      {% endif %}
+    </div>
+    <!-- Stats row -->
+    <div style="display:flex;gap:32px;justify-content:center;margin-top:64px;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">97.2%</div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Diabetes Accuracy</div>
+      </div>
+      <div style="width:1px;background:var(--glass-border);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,var(--purple),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">83.7%</div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Heart Disease Accuracy</div>
+      </div>
+      <div style="width:1px;background:var(--glass-border);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">100K+</div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Training Samples</div>
+      </div>
+    </div>
+  </div>
+  <!-- Decorative floating cards -->
+  <div style="position:absolute;right:5%;top:25%;animation:floatCard 5s ease-in-out infinite;" class="glass">
+    <div style="padding:20px 24px;text-align:left;min-width:180px;">
+      <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Risk Analysis</div>
+      <div style="font-size:1.8rem;font-weight:800;color:var(--green);margin:4px 0;">Low Risk</div>
+      <div style="font-size:0.8rem;color:var(--muted);">Probability: 12%</div>
+    </div>
+  </div>
+  <div style="position:absolute;left:5%;bottom:30%;animation:floatCard 6s ease-in-out infinite reverse;" class="glass">
+    <div style="padding:20px 24px;text-align:left;min-width:180px;">
+      <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Report Ready</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--cyan);margin:4px 0;"><i class="fas fa-file-pdf"></i> Health Report</div>
+      <div style="font-size:0.8rem;color:var(--muted);">PDF Generated ✓</div>
+    </div>
+  </div>
+</section>
+
+<style>
+@keyframes floatCard {
+  0%,100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-16px) rotate(1deg); }
+}
+@media(max-width:768px){
+  [style*="position:absolute"]{display:none !important;}
+}
+</style>
+
+<!-- Features -->
+<section id="features" style="padding:80px 40px;max-width:1200px;margin:0 auto;">
+  <div style="text-align:center;margin-bottom:60px;">
+    <div class="section-tag"><i class="fas fa-star"></i> Features</div>
+    <h2 style="font-size:2.5rem;font-weight:800;">Everything You Need</h2>
+    <p style="color:var(--muted);margin-top:12px;font-size:1.05rem;">Powered by advanced ML, beautiful visualizations & clinical insights</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
+    {% set features = [
+      ('fa-heartbeat','Heart Disease Detection','#ff6b6b','Predict 10-year cardiovascular risk using 15 clinical parameters with Gradient Boosting ML.'),
+      ('fa-syringe','Diabetes Detection','#00d4ff','Detect diabetes risk from glucose, BMI, HbA1c & more with 97.2% accuracy.'),
+      ('fa-chart-bar','EDA & Visualizations','#7c3aed','Deep exploratory analysis with interactive charts, correlations & distributions.'),
+      ('fa-file-medical-alt','PDF Report Generation','#06d6a0','Professional health reports with risk analysis, parameters & recommendations.'),
+      ('fa-history','Report History','#ffd166','Save and access all your prediction reports, track health trends over time.'),
+      ('fa-shield-alt','Secure & Private','#7c3aed','Your health data is encrypted and never shared with third parties.')
+    ] %}
+    {% for icon, title, color, desc in features %}
+    <div class="glass" style="padding:32px;transition:transform 0.3s;cursor:default;" onmouseenter="this.style.transform='translateY(-6px)'" onmouseleave="this.style.transform='translateY(0)'">
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,{{color}}22,{{color}}11);border:1px solid {{color}}44;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+        <i class="fas {{icon}}" style="color:{{color}};font-size:1.3rem;"></i>
+      </div>
+      <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">{{title}}</h3>
+      <p style="color:var(--muted);font-size:0.9rem;line-height:1.6;">{{desc}}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- Detection Cards -->
+<section style="padding:60px 40px;max-width:1200px;margin:0 auto;">
+  <div style="text-align:center;margin-bottom:50px;">
+    <div class="section-tag"><i class="fas fa-microscope"></i> Detections</div>
+    <h2 style="font-size:2.5rem;font-weight:800;">Choose Your Prediction</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:32px;">
+    <!-- Heart Card -->
+    <div class="glass" style="padding:40px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,107,107,0.15) 0%,transparent 70%);border-radius:50%;"></div>
+      <i class="fas fa-heartbeat" style="font-size:3rem;color:var(--red);margin-bottom:20px;display:block;"></i>
+      <h3 style="font-size:1.5rem;font-weight:800;margin-bottom:12px;">Heart Disease Detection</h3>
+      <p style="color:var(--muted);line-height:1.7;margin-bottom:24px;">Analyze cardiovascular risk factors including cholesterol, blood pressure, smoking history and more. Get instant 10-year CHD risk assessment.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;">
+        {% for param in ['Cholesterol','Blood Pressure','BMI','Smoking','Glucose','Heart Rate'] %}
+        <span style="padding:4px 12px;border-radius:50px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);font-size:0.8rem;color:var(--red);">{{param}}</span>
+        {% endfor %}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--red);">83.7%</div>
+          <div style="font-size:0.8rem;color:var(--muted);">Accuracy</div>
+        </div>
+        {% if user %}
+          <a href="/predict/heart" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Detect Now</a>
+        {% else %}
+          <a href="#" onclick="openModal('loginModal')" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Get Started</a>
+        {% endif %}
+      </div>
+    </div>
+    <!-- Diabetes Card -->
+    <div class="glass" style="padding:40px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(0,212,255,0.15) 0%,transparent 70%);border-radius:50%;"></div>
+      <i class="fas fa-syringe" style="font-size:3rem;color:var(--cyan);margin-bottom:20px;display:block;"></i>
+      <h3 style="font-size:1.5rem;font-weight:800;margin-bottom:12px;">Diabetes Detection</h3>
+      <p style="color:var(--muted);line-height:1.7;margin-bottom:24px;">Predict diabetes risk using HbA1c levels, blood glucose, BMI, smoking history and lifestyle factors with state-of-the-art accuracy.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;">
+        {% for param in ['HbA1c Level','Blood Glucose','BMI','Age','Smoking','Hypertension'] %}
+        <span style="padding:4px 12px;border-radius:50px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);font-size:0.8rem;color:var(--cyan);">{{param}}</span>
+        {% endfor %}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--cyan);">97.2%</div>
+          <div style="font-size:0.8rem;color:var(--muted);">Accuracy</div>
+        </div>
+        {% if user %}
+          <a href="/predict/diabetes" class="btn btn-cyan"><i class="fas fa-arrow-right"></i> Detect Now</a>
+        {% else %}
+          <a href="#" onclick="openModal('loginModal')" class="btn btn-cyan"><i class="fas fa-arrow-right"></i> Get Started</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+{% if not user %}
+<section style="padding:80px 40px;text-align:center;max-width:700px;margin:0 auto;">
+  <div class="glass" style="padding:60px 40px;">
+    <div style="font-size:3rem;margin-bottom:16px;">🩺</div>
+    <h2 style="font-size:2rem;font-weight:800;margin-bottom:16px;">Start Your Health Journey Today</h2>
+    <p style="color:var(--muted);margin-bottom:32px;line-height:1.7;">Create your free account and get instant access to AI-powered health predictions, detailed reports and personalized recommendations.</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+      <a href="#" onclick="openModal('registerModal')" class="btn btn-primary" style="padding:14px 36px;font-size:1rem;"><i class="fas fa-user-plus"></i> Create Free Account</a>
+      <a href="#" onclick="openModal('loginModal')" class="btn btn-glass" style="padding:14px 36px;font-size:1rem;"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Footer -->
+<footer style="border-top:1px solid var(--glass-border);padding:32px 40px;text-align:center;color:var(--muted);font-size:0.85rem;">
+  <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <img src="/static/img/logo.png" alt="" style="height:28px;" onerror="this.style.display='none'">
+      <span style="font-weight:700;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Healthy AI</span>
+    </div>
+    <div>© 2026 Healthy AI. For educational purposes only. Not medical advice.</div>
+    <div style="display:flex;gap:16px;">
+      <a href="/privacy" style="color:var(--muted);text-decoration:none;">Privacy</a>
+      <a href="/terms" style="color:var(--muted);text-decoration:none;">Terms</a>
+    </div>
+  </div>
+</footer>
+
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% block title %}Heart Disease Detection - Healthy AI{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:40px 32px;">
+  <div style="margin-bottom:32px;">
+    <a href="/dashboard" style="color:var(--muted);text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    <div style="margin-top:16px;">
+      <div class="section-tag" style="background:rgba(255,107,107,0.1);border-color:rgba(255,107,107,0.3);color:var(--red);"><i class="fas fa-heartbeat"></i> Heart Disease Detection</div>
+      <h1 style="font-size:2rem;font-weight:800;margin-top:8px;">Cardiovascular Risk Assessment</h1>
+      <p style="color:var(--muted);margin-top:4px;">Fill in the clinical parameters to predict 10-year CHD risk</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 420px;gap:32px;align-items:start;">
+    <!-- Form -->
+    <div class="glass" style="padding:40px;">
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:28px;"><i class="fas fa-user-md" style="color:var(--red)"></i> Patient Information</h2>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label><i class="fas fa-user"></i> Patient Full Name</label>
+          <input type="text" id="patient_name" class="form-input" placeholder="John Smith">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-venus-mars"></i> Gender</label>
+          <select id="male" class="form-input">
+            <option value="1">Male</option>
+            <option value="0">Female</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-birthday-cake"></i> Age</label>
+          <input type="number" id="age" class="form-input" placeholder="45" min="20" max="100" value="45">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-smoking"></i> Current Smoker</label>
+          <select id="currentSmoker" class="form-input">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-cigarette"></i> Cigarettes Per Day</label>
+          <input type="number" id="cigsPerDay" class="form-input" placeholder="0" min="0" max="70" value="0">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-pills"></i> BP Medication</label>
+          <select id="BPMeds" class="form-input">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-brain"></i> Prevalent Stroke</label>
+          <select id="prevalentStroke" class="form-input">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-tachometer-alt"></i> Hypertension</label>
+          <select id="prevalentHyp" class="form-input">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-syringe"></i> Diabetes</label>
+          <select id="diabetes" class="form-input">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-vials"></i> Total Cholesterol (mg/dL)</label>
+          <input type="number" id="totChol" class="form-input" placeholder="200" min="100" max="600" value="200">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-arrow-up"></i> Systolic BP (mmHg)</label>
+          <input type="number" id="sysBP" class="form-input" placeholder="120" min="80" max="300" value="120">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-arrow-down"></i> Diastolic BP (mmHg)</label>
+          <input type="number" id="diaBP" class="form-input" placeholder="80" min="40" max="200" value="80">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-weight"></i> BMI</label>
+          <input type="number" id="BMI" class="form-input" placeholder="25.0" min="10" max="60" step="0.1" value="25.0">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-heartbeat"></i> Heart Rate (bpm)</label>
+          <input type="number" id="heartRate" class="form-input" placeholder="75" min="40" max="200" value="75">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-tint"></i> Blood Glucose (mg/dL)</label>
+          <input type="number" id="glucose" class="form-input" placeholder="85" min="40" max="400" value="85">
+        </div>
+      </div>
+
+      <button id="predictBtn" class="btn btn-primary" style="width:100%;justify-content:center;padding:16px;font-size:1.05rem;margin-top:8px;" onclick="runPrediction()">
+        <i class="fas fa-brain"></i> Run AI Prediction
+      </button>
+    </div>
+
+    <!-- Result Panel -->
+    <div>
+      <!-- Reference Panel -->
+      <div class="glass" style="padding:28px;margin-bottom:20px;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;"><i class="fas fa-info-circle" style="color:var(--cyan)"></i> Normal Ranges</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:0.85rem;">
+          {% for param, normal in [
+            ('Cholesterol','< 200 mg/dL'),
+            ('Systolic BP','< 120 mmHg'),
+            ('Diastolic BP','< 80 mmHg'),
+            ('BMI','18.5 – 24.9'),
+            ('Heart Rate','60 – 100 bpm'),
+            ('Glucose','70 – 99 mg/dL')
+          ] %}
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span style="color:var(--muted);">{{param}}</span>
+            <span style="color:var(--green);font-weight:600;">{{normal}}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Result Box -->
+      <div id="resultBox" style="display:none;">
+        <div class="glass" style="padding:32px;text-align:center;border:1px solid rgba(255,107,107,0.2);">
+          <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;">Prediction Result</div>
+          <div id="resultTitle" style="font-size:1.3rem;font-weight:800;margin-bottom:8px;"></div>
+          <div id="resultBadge" style="margin-bottom:20px;display:flex;justify-content:center;"></div>
+          <div id="gaugeImg" style="margin-bottom:16px;"></div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+            <a id="pdfBtn" href="#" class="btn btn-green btn-sm" style="display:none;"><i class="fas fa-file-pdf"></i> Download Report</a>
+            <button class="btn btn-glass btn-sm" onclick="resetForm()"><i class="fas fa-redo"></i> New Test</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div id="loadingBox" style="display:none;">
+        <div class="glass" style="padding:48px;text-align:center;">
+          <div class="spinner" style="margin:0 auto 16px;width:40px;height:40px;border-width:4px;"></div>
+          <div style="color:var(--muted);font-size:0.9rem;">Analyzing clinical data...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function runPrediction() {
+  const fields = ['patient_name','male','age','currentSmoker','cigsPerDay',
+                   'BPMeds','prevalentStroke','prevalentHyp','diabetes',
+                   'totChol','sysBP','diaBP','BMI','heartRate','glucose'];
+  const data = {};
+  for (const f of fields) {
+    const el = document.getElementById(f);
+    if (!el || el.value === '') { showToast(`Please fill: ${f}`, 'error'); return; }
+    data[f] = el.value;
+  }
+  
+  document.getElementById('predictBtn').disabled = true;
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('loadingBox').style.display = 'block';
+  
+  try {
+    const r = await fetch('/predict/heart', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const d = await r.json();
+    document.getElementById('loadingBox').style.display = 'none';
+    
+    if (d.success) {
+      document.getElementById('resultTitle').textContent = d.prediction;
+      
+      const badgeClass = d.risk_level === 'Low Risk' ? 'badge-low' : d.risk_level === 'Moderate Risk' ? 'badge-moderate' : 'badge-high';
+      document.getElementById('resultBadge').innerHTML = `<span class="badge ${badgeClass}"><i class="fas fa-circle"></i> ${d.risk_level} · ${d.probability}%</span>`;
+      
+      document.getElementById('gaugeImg').innerHTML = `<img src="data:image/png;base64,${d.gauge_chart}" style="width:100%;max-width:300px;">`;
+      
+      const pdfBtn = document.getElementById('pdfBtn');
+      pdfBtn.style.display = 'inline-flex';
+      pdfBtn.href = `/download/${d.pdf_file}`;
+      
+      document.getElementById('resultBox').style.display = 'block';
+      showToast('Prediction complete!', 'success');
+    }
+  } catch(e) {
+    document.getElementById('loadingBox').style.display = 'none';
+    showToast('Prediction failed. Try again.', 'error');
+  }
+  document.getElementById('predictBtn').disabled = false;
+}
+
+function resetForm() {
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('loadingBox').style.display = 'none';
+}
+</script>
+{% endblock %}

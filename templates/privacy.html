@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Privacy Policy - Healthy AI{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:60px 32px;">
+  <div class="section-tag"><i class="fas fa-user-shield"></i> Privacy Policy</div>
+  <h1 style="font-size:2.2rem;font-weight:800;margin:12px 0 8px;">Privacy Policy</h1>
+  <p style="color:var(--muted);margin-bottom:40px;">Last Updated: January 2026 &nbsp;|&nbsp; Your privacy is our responsibility</p>
+  <div style="display:flex;flex-direction:column;gap:24px;">
+    <div class="glass" style="padding:28px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="width:40px;height:40px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-database" style="color:var(--cyan);"></i></div>
+        <h2 style="font-size:1.1rem;font-weight:700;">What Data We Collect</h2>
+      </div>
+      <p style="color:var(--muted);line-height:1.8;">Full name, email address and hashed password for your account. Health parameters you enter in prediction forms — age, BMI, blood pressure, glucose levels etc. Prediction results and generated PDF reports. Basic session information to keep you logged in.</p>
+    </div>
+    <div class="glass" style="padding:28px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="width:40px;height:40px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-cogs" style="color:var(--purple);"></i></div>
+        <h2 style="font-size:1.1rem;font-weight:700;">How We Use Your Data</h2>
+      </div>
+      <p style="color:var(--muted);line-height:1.8;">Your health parameters are used as input to the ML prediction model. To generate personalized PDF health reports. To display your report history in the dashboard. No data is used for marketing, advertising, or sold to any third party.</p>
+    </div>
+    <div class="glass" style="padding:28px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="width:40px;height:40px;background:rgba(6,214,160,0.1);border:1px solid rgba(6,214,160,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-lock" style="color:var(--green);"></i></div>
+        <h2 style="font-size:1.1rem;font-weight:700;">Data Security</h2>
+      </div>
+      <p style="color:var(--muted);line-height:1.8;">Passwords are secured with SHA-256 hashing. The database is a local SQLite file — no cloud storage involved. Session tokens are secure and time-limited. No sensitive data is stored in plain text.</p>
+    </div>
+    <div class="glass" style="padding:28px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="width:40px;height:40px;background:rgba(255,209,102,0.1);border:1px solid rgba(255,209,102,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-user-check" style="color:var(--yellow);"></i></div>
+        <h2 style="font-size:1.1rem;font-weight:700;">Your Rights</h2>
+      </div>
+      <p style="color:var(--muted);line-height:1.8;">You can delete your account at any time. You can download all your reports. You have the right to request a data export. You can request correction of any inaccurate data.</p>
+    </div>
+    <div class="glass" style="padding:28px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="width:40px;height:40px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-cookie-bite" style="color:var(--red);"></i></div>
+        <h2 style="font-size:1.1rem;font-weight:700;">Cookies</h2>
+      </div>
+      <p style="color:var(--muted);line-height:1.8;">We use only session cookies to maintain your login state. No tracking, advertising, or third-party cookies are used. Session cookies are deleted when you close your browser.</p>
+    </div>
+    <div class="glass" style="padding:28px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="width:40px;height:40px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:10px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-envelope" style="color:var(--cyan);"></i></div>
+        <h2 style="font-size:1.1rem;font-weight:700;">Contact Us</h2>
+      </div>
+      <p style="color:var(--muted);line-height:1.8;">For any privacy concerns, write to us at: healthyai@hackathon2026.in<br>Healthy AI — AI-Powered Health Prediction Platform — Hackathon Project 2026</p>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:40px;"><a href="/" class="btn btn-glass"><i class="fas fa-arrow-left"></i> Back to Home</a></div>
+</div>
+{% endblock %}

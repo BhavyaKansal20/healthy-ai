@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% block title %}EDA Analysis - Healthy AI{% endblock %}
+{% block content %}
+<div style="max-width:1400px;margin:0 auto;padding:40px 32px;">
+  <div style="margin-bottom:32px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <a href="/dashboard" style="color:var(--muted);text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+      <div style="margin-top:12px;">
+        <div class="section-tag"><i class="fas fa-chart-bar"></i> Exploratory Data Analysis</div>
+        <h1 style="font-size:2rem;font-weight:800;margin-top:8px;">
+          {% if model_type == 'heart' %}Heart Disease{% else %}Diabetes{% endif %} — Data Analysis & Insights
+        </h1>
+        <p style="color:var(--muted);margin-top:4px;">Deep insights into model training data, feature importance and statistical distributions</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a href="/eda/heart" class="btn {% if model_type=='heart' %}btn-primary{% else %}btn-glass{% endif %} btn-sm"><i class="fas fa-heartbeat"></i> Heart EDA</a>
+      <a href="/eda/diabetes" class="btn {% if model_type=='diabetes' %}btn-cyan{% else %}btn-glass{% endif %} btn-sm"><i class="fas fa-syringe"></i> Diabetes EDA</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:40px;">
+    <div class="stat-card">
+      <div class="stat-number" style="color:var(--green);">{{ meta.accuracy }}%</div>
+      <div class="stat-label"><i class="fas fa-bullseye"></i> Model Accuracy</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:var(--cyan);">{{ meta.roc_auc }}%</div>
+      <div class="stat-label"><i class="fas fa-chart-line"></i> ROC-AUC Score</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:var(--purple);">{{ '{:,}'.format(meta.n_samples) }}</div>
+      <div class="stat-label"><i class="fas fa-database"></i> Training Samples</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:var(--yellow);">{{ meta.features|length }}</div>
+      <div class="stat-label"><i class="fas fa-list"></i> Features Used</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(500px,1fr));gap:24px;">
+    <div class="glass" style="padding:28px;">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:8px;"><i class="fas fa-sort-amount-down" style="color:var(--cyan)"></i> Feature Importance</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">Which factors most influence the prediction model</p>
+      <img src="data:image/png;base64,{{ charts.fi }}" style="width:100%;border-radius:12px;">
+    </div>
+    <div class="glass" style="padding:28px;">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:8px;"><i class="fas fa-chart-pie" style="color:var(--purple)"></i> Class Distribution</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">Ratio of positive vs negative cases in the dataset</p>
+      <img src="data:image/png;base64,{{ charts.dist }}" style="width:100%;border-radius:12px;">
+    </div>
+    <div class="glass" style="padding:28px;">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:8px;"><i class="fas fa-project-diagram" style="color:var(--green)"></i> Feature Correlation with Target</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">Pearson correlation coefficient of each feature with the outcome variable</p>
+      <img src="data:image/png;base64,{{ charts.corr }}" style="width:100%;border-radius:12px;">
+    </div>
+    <div class="glass" style="padding:28px;">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:8px;"><i class="fas fa-chart-area" style="color:var(--yellow)"></i>
+        {% if model_type == 'heart' %}Age Distribution by Outcome{% else %}BMI Distribution by Outcome{% endif %}
+      </h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">
+        {% if model_type == 'heart' %}How age distribution differs between CHD and non-CHD patients{% else %}How BMI distribution differs between diabetic and non-diabetic patients{% endif %}
+      </p>
+      <img src="data:image/png;base64,{{ charts.age }}" style="width:100%;border-radius:12px;">
+    </div>
+  </div>
+
+  <!-- Feature Importance Bars -->
+  <div class="glass" style="padding:32px;margin-top:24px;">
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-list-ul" style="color:var(--purple)"></i> Model Features & Importance Scores</h3>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:20px;">Relative contribution of each feature inside the Gradient Boosting model</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+      {% for feat in meta.features %}
+        {% set imp = meta.feature_importance[feat] %}
+        {% set raw = (imp * 500)|int %}
+        {% set bar_pct = 100 if raw > 100 else raw %}
+        <div style="padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:12px;">
+          <div style="font-size:0.85rem;font-weight:600;margin-bottom:8px;">{{ feat.replace('_',' ').title() }}</div>
+          <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-bottom:6px;">
+            <div style="height:100%;width:{{ bar_pct }}%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;"></div>
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted);">Score: <span style="color:var(--cyan);">{{ '%.4f'|format(imp) }}</span></div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Classification Report — safe: skip float 'accuracy' key -->
+  <div class="glass" style="padding:32px;margin-top:24px;">
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:6px;"><i class="fas fa-table" style="color:var(--green)"></i> Classification Report (Test Set)</h3>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:20px;">Precision, Recall and F1-Score of the model on held-out test data</p>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+        <thead>
+          <tr style="background:rgba(124,58,237,0.15);border-bottom:1px solid var(--glass-border);">
+            <th style="padding:12px 16px;text-align:left;color:var(--muted);font-size:0.8rem;text-transform:uppercase;">Class</th>
+            <th style="padding:12px 16px;text-align:center;color:var(--muted);font-size:0.8rem;text-transform:uppercase;">Precision</th>
+            <th style="padding:12px 16px;text-align:center;color:var(--muted);font-size:0.8rem;text-transform:uppercase;">Recall</th>
+            <th style="padding:12px 16px;text-align:center;color:var(--muted);font-size:0.8rem;text-transform:uppercase;">F1-Score</th>
+            <th style="padding:12px 16px;text-align:center;color:var(--muted);font-size:0.8rem;text-transform:uppercase;">Support</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cls, vals in meta.report.items() %}
+            {% if vals is mapping %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"
+                onmouseenter="this.style.background='rgba(255,255,255,0.03)'"
+                onmouseleave="this.style.background=''">
+              <td style="padding:12px 16px;font-weight:600;">
+                {% if cls == '0' %}No Disease
+                {% elif cls == '1' %}Disease Positive
+                {% elif cls == 'macro avg' %}<span style="color:var(--cyan)">Macro Average</span>
+                {% elif cls == 'weighted avg' %}<span style="color:var(--purple)">Weighted Average</span>
+                {% else %}{{ cls }}{% endif %}
+              </td>
+              <td style="padding:12px 16px;text-align:center;color:var(--green);">{{ '%.3f'|format(vals.precision) }}</td>
+              <td style="padding:12px 16px;text-align:center;color:var(--cyan);">{{ '%.3f'|format(vals.recall) }}</td>
+              <td style="padding:12px 16px;text-align:center;color:var(--yellow);">{{ '%.3f'|format(vals['f1-score']) }}</td>
+              <td style="padding:12px 16px;text-align:center;color:var(--muted);">{{ vals.support|int }}</td>
+            </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;padding:12px 16px;background:rgba(6,214,160,0.08);border:1px solid rgba(6,214,160,0.2);border-radius:10px;display:inline-flex;align-items:center;gap:10px;">
+      <i class="fas fa-check-circle" style="color:var(--green);"></i>
+      <span style="font-size:0.9rem;">Overall Accuracy: <strong style="color:var(--green);">{{ meta.accuracy }}%</strong> — Verified on test set</span>
+    </div>
+  </div>
+
+  <!-- Mathematical Foundation -->
+  <div class="glass" style="padding:32px;margin-top:24px;border:1px solid rgba(124,58,237,0.2);">
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;"><i class="fas fa-square-root-alt" style="color:var(--yellow)"></i> Mathematical Foundation</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;font-size:0.88rem;line-height:1.7;">
+      <div style="padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(0,212,255,0.15);">
+        <div style="color:var(--cyan);font-weight:700;margin-bottom:8px;font-family:var(--mono);"><i class="fas fa-tree"></i> Gradient Boosting</div>
+        <div style="color:var(--muted);">F(x) = F₀ + Σₘ η·γₘ·hₘ(x)<br>Each iteration fits a weak learner (shallow tree) on the residuals of the previous model. n_estimators={% if model_type=='heart' %}200{% else %}150{% endif %}, max_depth=4.</div>
+      </div>
+      <div style="padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(124,58,237,0.15);">
+        <div style="color:var(--purple);font-weight:700;margin-bottom:8px;font-family:var(--mono);"><i class="fas fa-balance-scale"></i> Loss Function</div>
+        <div style="color:var(--muted);">Binary Cross-Entropy:<br>L = −[y·log(p) + (1−y)·log(1−p)]<br>Minimized via gradient descent each boosting step. Learning rate η = 0.1 prevents overfitting.</div>
+      </div>
+      <div style="padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(6,214,160,0.15);">
+        <div style="color:var(--green);font-weight:700;margin-bottom:8px;font-family:var(--mono);"><i class="fas fa-chart-line"></i> ROC-AUC Score</div>
+        <div style="color:var(--muted);">AUC = P(score_pos > score_neg)<br>1.0 = perfect classifier, 0.5 = random guess.<br>This model's AUC: <strong style="color:var(--green);">{{ meta.roc_auc }}%</strong></div>
+      </div>
+      <div style="padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,209,102,0.15);">
+        <div style="color:var(--yellow);font-weight:700;margin-bottom:8px;font-family:var(--mono);"><i class="fas fa-crosshairs"></i> F1 Score & StandardScaler</div>
+        <div style="color:var(--muted);">F1 = 2·(P·R)/(P+R)<br>Features normalized via StandardScaler: z = (x−μ)/σ. Ensures all features are treated equally by the model regardless of their original scale.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div style="display:flex;gap:16px;justify-content:center;margin-top:32px;flex-wrap:wrap;">
+    <a href="/predict/{{ model_type }}" class="btn {% if model_type=='heart' %}btn-primary{% else %}btn-cyan{% endif %}">
+      <i class="fas fa-brain"></i> Run Prediction Now
+    </a>
+    <a href="/reports" class="btn btn-glass"><i class="fas fa-file-medical"></i> View My Reports</a>
+  </div>
+</div>
+{% endblock %}

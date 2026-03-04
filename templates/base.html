@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Healthy AI{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #04040f;
+    --glass: rgba(255,255,255,0.05);
+    --glass-border: rgba(255,255,255,0.1);
+    --glass-hover: rgba(255,255,255,0.09);
+    --purple: #7c3aed;
+    --cyan: #00d4ff;
+    --green: #06d6a0;
+    --red: #ff6b6b;
+    --yellow: #ffd166;
+    --text: #e8e8f0;
+    --muted: #888aa0;
+    --card-blur: blur(20px);
+    --radius: 20px;
+    --font: 'Outfit', sans-serif;
+    --mono: 'Space Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 20%, rgba(124,58,237,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(0,212,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(6,214,160,0.06) 0%, transparent 60%);
+    z-index: -2;
+    pointer-events: none;
+  }
+  /* Floating orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.25;
+    z-index: -1;
+    pointer-events: none;
+    animation: floatOrb 12s ease-in-out infinite;
+  }
+  .orb-1 { width: 500px; height: 500px; background: var(--purple); top: -200px; left: -100px; animation-delay: 0s; }
+  .orb-2 { width: 400px; height: 400px; background: var(--cyan); bottom: -100px; right: -100px; animation-delay: -4s; }
+  .orb-3 { width: 300px; height: 300px; background: var(--green); top: 50%; left: 60%; animation-delay: -8s; }
+  @keyframes floatOrb {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33% { transform: translate(30px,-20px) scale(1.05); }
+    66% { transform: translate(-20px,30px) scale(0.95); }
+  }
+  /* Glass card */
+  .glass {
+    background: var(--glass);
+    backdrop-filter: var(--card-blur);
+    -webkit-backdrop-filter: var(--card-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+  }
+  .glass:hover { background: var(--glass-hover); }
+  /* Navbar */
+  nav.navbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1000;
+    background: rgba(4,4,15,0.7);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 12px;
+    text-decoration: none;
+  }
+  .nav-brand img { height: 36px; width: auto; }
+  .nav-brand span {
+    font-size: 1.4rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .nav-links { display: flex; align-items: center; gap: 8px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; padding: 8px 16px;
+    border-radius: 50px; font-size: 0.9rem; font-weight: 500;
+    transition: all 0.3s;
+  }
+  .nav-links a:hover, .nav-links a.active {
+    color: var(--text); background: var(--glass); border: 1px solid var(--glass-border);
+  }
+  .nav-links .btn-nav {
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    color: white !important; padding: 8px 20px; border-radius: 50px;
+    font-weight: 600;
+  }
+  /* Main content */
+  main { padding-top: 80px; min-height: 100vh; }
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 28px; border-radius: 50px; font-size: 0.95rem;
+    font-weight: 600; font-family: var(--font); cursor: pointer;
+    border: none; transition: all 0.3s; text-decoration: none;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--purple), #5b21b6);
+    color: white; box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124,58,237,0.6); }
+  .btn-cyan {
+    background: linear-gradient(135deg, var(--cyan), #0ea5e9);
+    color: #04040f; box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+  }
+  .btn-cyan:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,212,255,0.5); }
+  .btn-green {
+    background: linear-gradient(135deg, var(--green), #059669);
+    color: white; box-shadow: 0 4px 20px rgba(6,214,160,0.3);
+  }
+  .btn-green:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(6,214,160,0.5); }
+  .btn-glass {
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text);
+  }
+  .btn-glass:hover { background: var(--glass-hover); transform: translateY(-1px); }
+  .btn-sm { padding: 8px 18px; font-size: 0.85rem; }
+  /* Input styles */
+  .form-group { margin-bottom: 20px; }
+  .form-group label {
+    display: block; font-size: 0.85rem; font-weight: 600;
+    color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .form-input {
+    width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.06);
+    border: 1px solid var(--glass-border); border-radius: 12px;
+    color: var(--text); font-family: var(--font); font-size: 0.95rem;
+    transition: all 0.3s; outline: none;
+  }
+  .form-input:focus {
+    border-color: var(--purple); background: rgba(124,58,237,0.08);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  }
+  .form-input option { background: #1a1a2e; }
+  /* Section title */
+  .section-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3);
+    color: var(--purple); padding: 6px 16px; border-radius: 50px; font-size: 0.8rem;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
+  }
+  /* Risk badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 14px; border-radius: 50px; font-size: 0.8rem; font-weight: 600;
+  }
+  .badge-low { background: rgba(6,214,160,0.15); color: var(--green); border: 1px solid rgba(6,214,160,0.3); }
+  .badge-moderate { background: rgba(255,209,102,0.15); color: var(--yellow); border: 1px solid rgba(255,209,102,0.3); }
+  .badge-high { background: rgba(255,107,107,0.15); color: var(--red); border: 1px solid rgba(255,107,107,0.3); }
+  /* Stat card */
+  .stat-card {
+    padding: 24px; border-radius: var(--radius);
+    background: var(--glass); border: 1px solid var(--glass-border);
+    backdrop-filter: var(--card-blur); text-align: center;
+    transition: transform 0.3s;
+  }
+  .stat-card:hover { transform: translateY(-4px); }
+  .stat-number { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+  .stat-label { font-size: 0.85rem; color: var(--muted); margin-top: 6px; font-weight: 500; }
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 30px; right: 30px; z-index: 9999;
+    background: var(--glass); backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border); border-radius: 14px;
+    padding: 16px 24px; font-size: 0.9rem; font-weight: 500;
+    transform: translateY(100px); opacity: 0; transition: all 0.4s;
+    max-width: 360px; display: flex; align-items: center; gap: 12px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: rgba(6,214,160,0.4); }
+  #toast.error { border-color: rgba(255,107,107,0.4); }
+  /* Spinner */
+  .spinner {
+    width: 22px; height: 22px; border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--cyan); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 3px; }
+  /* Responsive */
+  @media (max-width: 768px) {
+    nav.navbar { padding: 12px 20px; }
+    .nav-links a:not(.btn-nav):not(.active) { display: none; }
+  }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<nav class="navbar">
+  <a href="/" class="nav-brand">
+    <img src="/static/img/logo.png" alt="Healthy AI" onerror="this.style.display='none'">
+    <span>Healthy AI</span>
+  </a>
+  <div class="nav-links">
+    {% if user %}
+      <a href="/dashboard" {% if request.path == '/dashboard' %}class="active"{% endif %}><i class="fas fa-chart-line"></i> Dashboard</a>
+      <a href="/predict/heart" {% if '/heart' in request.path %}class="active"{% endif %}><i class="fas fa-heartbeat"></i> Heart</a>
+      <a href="/predict/diabetes" {% if '/diabetes' in request.path %}class="active"{% endif %}><i class="fas fa-syringe"></i> Diabetes</a>
+      <a href="/reports" {% if request.path == '/reports' %}class="active"{% endif %}><i class="fas fa-file-medical"></i> Reports</a>
+      <a href="/logout" class="btn-nav btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    {% else %}
+      <a href="/" {% if request.path == '/' %}class="active"{% endif %}>Home</a>
+      <a href="#features">Features</a>
+      <a href="#" onclick="openModal('loginModal')" class="btn-nav btn"><i class="fas fa-user"></i> Sign In</a>
+    {% endif %}
+  </div>
+</nav>
+
+{% if not user %}
+<!-- Auth Modals -->
+<div id="loginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;backdrop-filter:blur(10px);align-items:center;justify-content:center;">
+  <div class="glass" style="width:420px;max-width:90%;padding:40px;border-radius:24px;position:relative;">
+    <button onclick="closeModal('loginModal')" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;"><i class="fas fa-times"></i></button>
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:2rem;margin-bottom:8px;">🩺</div>
+      <h2 style="font-size:1.5rem;font-weight:800;">Welcome back</h2>
+      <p style="color:var(--muted);font-size:0.9rem;margin-top:4px;">Sign in to your Healthy AI account</p>
+    </div>
+    <div id="loginForm">
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" class="form-input" placeholder="you@example.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="loginPw" class="form-input" placeholder="••••••••"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+      <p style="text-align:center;margin-top:16px;color:var(--muted);font-size:0.9rem;">
+        No account? <a href="#" onclick="switchModal('loginModal','registerModal')" style="color:var(--cyan);">Create one</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="registerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;backdrop-filter:blur(10px);align-items:center;justify-content:center;">
+  <div class="glass" style="width:420px;max-width:90%;padding:40px;border-radius:24px;position:relative;">
+    <button onclick="closeModal('registerModal')" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;"><i class="fas fa-times"></i></button>
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:2rem;margin-bottom:8px;">✨</div>
+      <h2 style="font-size:1.5rem;font-weight:800;">Create Account</h2>
+      <p style="color:var(--muted);font-size:0.9rem;margin-top:4px;">Join Healthy AI for free</p>
+    </div>
+    <div class="form-group"><label>Full Name</label><input type="text" id="regName" class="form-input" placeholder="Dr. John Smith"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="regEmail" class="form-input" placeholder="you@example.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="regPw" class="form-input" placeholder="••••••••"></div>
+    <button class="btn btn-cyan" style="width:100%;justify-content:center;" onclick="doRegister()"><i class="fas fa-user-plus"></i> Create Account</button>
+    <p style="text-align:center;margin-top:16px;color:var(--muted);font-size:0.9rem;">
+      Have an account? <a href="#" onclick="switchModal('registerModal','loginModal')" style="color:var(--cyan);">Sign in</a>
+    </p>
+  </div>
+</div>
+{% endif %}
+
+<div id="toast"></div>
+
+<main>{% block content %}{% endblock %}</main>
+
+<script>
+function openModal(id) {
+  const m = document.getElementById(id);
+  m.style.display = 'flex';
+  setTimeout(() => m.querySelector('.glass').style.animation = 'modalIn 0.3s ease forwards', 10);
+}
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function switchModal(from, to) { closeModal(from); openModal(to); }
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const pw = document.getElementById('loginPw').value;
+  if (!email || !pw) return showToast('Please fill all fields', 'error');
+  const r = await fetch('/login', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({email, password: pw})
+  });
+  const d = await r.json();
+  if (d.success) { showToast(`Welcome back, ${d.name}!`, 'success'); setTimeout(() => location.href='/dashboard', 800); }
+  else showToast(d.msg, 'error');
+}
+
+async function doRegister() {
+  const name = document.getElementById('regName').value;
+  const email = document.getElementById('regEmail').value;
+  const pw = document.getElementById('regPw').value;
+  if (!name || !email || !pw) return showToast('Please fill all fields', 'error');
+  const r = await fetch('/register', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name, email, password: pw})
+  });
+  const d = await r.json();
+  if (d.success) { showToast(`Account created! Welcome, ${d.name}!`, 'success'); setTimeout(() => location.href='/dashboard', 800); }
+  else showToast(d.msg, 'error');
+}
+
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.innerHTML = `<i class="fas fa-${type==='success'?'check-circle':'exclamation-circle'}" style="color:var(--${type==='success'?'green':'red'})"></i> ${msg}`;
+  t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3500);
+}
+
+// Enter key for modals
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('loginModal')?.style.display === 'flex') doLogin();
+    if (document.getElementById('registerModal')?.style.display === 'flex') doRegister();
+  }
+  if (e.key === 'Escape') {
+    ['loginModal','registerModal'].forEach(closeModal);
+  }
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

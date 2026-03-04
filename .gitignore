@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+env/
+.env
+
+# Database (personal data)
+healthyai.db
+
+# ML Models (will retrain on deploy)
+models/*.pkl
+models/*.json
+
+# Generated reports (user files)
+static/reports/*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

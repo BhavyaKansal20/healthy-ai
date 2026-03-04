@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}Diabetes Detection - Healthy AI{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:40px 32px;">
+  <div style="margin-bottom:32px;">
+    <a href="/dashboard" style="color:var(--muted);text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    <div style="margin-top:16px;">
+      <div class="section-tag" style="background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.3);color:var(--cyan);"><i class="fas fa-syringe"></i> Diabetes Detection</div>
+      <h1 style="font-size:2rem;font-weight:800;margin-top:8px;">Diabetes Risk Assessment</h1>
+      <p style="color:var(--muted);margin-top:4px;">Fill in the metabolic parameters to predict diabetes risk</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 420px;gap:32px;align-items:start;">
+    <!-- Form -->
+    <div class="glass" style="padding:40px;">
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:28px;"><i class="fas fa-user-md" style="color:var(--cyan)"></i> Patient Information</h2>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label><i class="fas fa-user"></i> Patient Full Name</label>
+          <input type="text" id="patient_name" class="form-input" placeholder="Jane Smith">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-venus-mars"></i> Gender</label>
+          <select id="gender" class="form-input">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-birthday-cake"></i> Age</label>
+          <input type="number" id="age" class="form-input" placeholder="40" min="1" max="120" value="40">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-tachometer-alt"></i> Hypertension</label>
+          <select id="hypertension" class="form-input">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-heartbeat"></i> Heart Disease History</label>
+          <select id="heart_disease" class="form-input">
+            <option value="0">No</option>
+            <option value="1">Yes</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label><i class="fas fa-smoking"></i> Smoking History</label>
+          <select id="smoking_history" class="form-input">
+            <option value="never">Never</option>
+            <option value="No Info">No Info</option>
+            <option value="current">Current Smoker</option>
+            <option value="former">Former Smoker</option>
+            <option value="ever">Ever Smoked</option>
+            <option value="not current">Not Current</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-weight"></i> BMI</label>
+          <input type="number" id="bmi" class="form-input" placeholder="24.0" min="10" max="80" step="0.1" value="24.0">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-vials"></i> HbA1c Level (%)</label>
+          <input type="number" id="HbA1c_level" class="form-input" placeholder="5.5" min="3" max="15" step="0.1" value="5.5">
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label><i class="fas fa-tint"></i> Blood Glucose Level (mg/dL)</label>
+          <input type="number" id="blood_glucose_level" class="form-input" placeholder="100" min="50" max="400" value="100">
+        </div>
+      </div>
+
+      <!-- BMI Calculator -->
+      <div class="glass" style="padding:20px;margin-top:8px;margin-bottom:20px;background:rgba(0,212,255,0.05);border-color:rgba(0,212,255,0.2);">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:12px;color:var(--cyan);"><i class="fas fa-calculator"></i> BMI Calculator</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end;">
+          <div><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:4px;">Height (cm)</label><input type="number" id="calcHeight" class="form-input" placeholder="170"></div>
+          <div><label style="font-size:0.75rem;color:var(--muted);display:block;margin-bottom:4px;">Weight (kg)</label><input type="number" id="calcWeight" class="form-input" placeholder="70"></div>
+          <button class="btn btn-glass btn-sm" onclick="calcBMI()" style="margin-bottom:0;"><i class="fas fa-calculator"></i> Calculate</button>
+        </div>
+        <div id="bmiResult" style="margin-top:8px;font-size:0.85rem;color:var(--muted);"></div>
+      </div>
+
+      <button id="predictBtn" class="btn btn-cyan" style="width:100%;justify-content:center;padding:16px;font-size:1.05rem;" onclick="runPrediction()">
+        <i class="fas fa-brain"></i> Run AI Prediction
+      </button>
+    </div>
+
+    <!-- Result Panel -->
+    <div>
+      <!-- Reference -->
+      <div class="glass" style="padding:28px;margin-bottom:20px;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;"><i class="fas fa-info-circle" style="color:var(--cyan)"></i> Diabetes Reference</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:0.85rem;">
+          {% for param, normal, risk in [
+            ('HbA1c','< 5.7% (Normal)','≥ 6.5% (Diabetes)'),
+            ('Fasting Glucose','< 100 mg/dL','≥ 126 mg/dL'),
+            ('BMI','18.5 – 24.9','> 30 (Obese)'),
+          ] %}
+          <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div style="font-weight:600;margin-bottom:4px;">{{param}}</div>
+            <div style="color:var(--green);font-size:0.8rem;">✓ {{normal}}</div>
+            <div style="color:var(--red);font-size:0.8rem;">⚠ {{risk}}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Result Box -->
+      <div id="resultBox" style="display:none;">
+        <div class="glass" style="padding:32px;text-align:center;border:1px solid rgba(0,212,255,0.2);">
+          <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;">Prediction Result</div>
+          <div id="resultTitle" style="font-size:1.3rem;font-weight:800;margin-bottom:8px;"></div>
+          <div id="resultBadge" style="margin-bottom:20px;display:flex;justify-content:center;"></div>
+          <div id="gaugeImg" style="margin-bottom:16px;"></div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+            <a id="pdfBtn" href="#" class="btn btn-green btn-sm" style="display:none;"><i class="fas fa-file-pdf"></i> Download Report</a>
+            <button class="btn btn-glass btn-sm" onclick="resetForm()"><i class="fas fa-redo"></i> New Test</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div id="loadingBox" style="display:none;">
+        <div class="glass" style="padding:48px;text-align:center;">
+          <div class="spinner" style="margin:0 auto 16px;width:40px;height:40px;border-width:4px;border-top-color:var(--cyan);"></div>
+          <div style="color:var(--muted);font-size:0.9rem;">Analyzing metabolic data...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function calcBMI() {
+  const h = parseFloat(document.getElementById('calcHeight').value);
+  const w = parseFloat(document.getElementById('calcWeight').value);
+  if (!h || !w) return;
+  const bmi = (w / (h/100) ** 2).toFixed(1);
+  document.getElementById('bmi').value = bmi;
+  let cat = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
+  let color = bmi < 25 ? 'var(--green)' : bmi < 30 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('bmiResult').innerHTML = `BMI: <strong style="color:${color}">${bmi}</strong> — ${cat}`;
+}
+
+async function runPrediction() {
+  const fields = ['patient_name','gender','age','hypertension','heart_disease',
+                   'smoking_history','bmi','HbA1c_level','blood_glucose_level'];
+  const data = {};
+  for (const f of fields) {
+    const el = document.getElementById(f);
+    if (!el || el.value === '') { showToast(`Please fill: ${f}`, 'error'); return; }
+    data[f] = el.value;
+  }
+  
+  document.getElementById('predictBtn').disabled = true;
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('loadingBox').style.display = 'block';
+  
+  try {
+    const r = await fetch('/predict/diabetes', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const d = await r.json();
+    document.getElementById('loadingBox').style.display = 'none';
+    
+    if (d.success) {
+      document.getElementById('resultTitle').textContent = d.prediction;
+      const badgeClass = d.risk_level === 'Low Risk' ? 'badge-low' : d.risk_level === 'Moderate Risk' ? 'badge-moderate' : 'badge-high';
+      document.getElementById('resultBadge').innerHTML = `<span class="badge ${badgeClass}"><i class="fas fa-circle"></i> ${d.risk_level} · ${d.probability}%</span>`;
+      document.getElementById('gaugeImg').innerHTML = `<img src="data:image/png;base64,${d.gauge_chart}" style="width:100%;max-width:300px;">`;
+      const pdfBtn = document.getElementById('pdfBtn');
+      pdfBtn.style.display = 'inline-flex';
+      pdfBtn.href = `/download/${d.pdf_file}`;
+      document.getElementById('resultBox').style.display = 'block';
+      showToast('Prediction complete!', 'success');
+    }
+  } catch(e) {
+    document.getElementById('loadingBox').style.display = 'none';
+    showToast('Prediction failed. Try again.', 'error');
+  }
+  document.getElementById('predictBtn').disabled = false;
+}
+
+function resetForm() {
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('loadingBox').style.display = 'none';
+}
+</script>
+{% endblock %}

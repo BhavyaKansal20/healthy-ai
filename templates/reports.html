@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}My Reports - Healthy AI{% endblock %}
+{% block content %}
+<div style="max-width:1400px;margin:0 auto;padding:40px 32px;">
+  <div style="margin-bottom:32px;">
+    <a href="/dashboard" style="color:var(--muted);text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div class="section-tag"><i class="fas fa-file-medical"></i> Reports</div>
+        <h1 style="font-size:2rem;font-weight:800;margin-top:8px;">My Health Reports</h1>
+        <p style="color:var(--muted);margin-top:4px;">All saved predictions and generated health reports</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="/predict/heart" class="btn btn-primary btn-sm"><i class="fas fa-heartbeat"></i> New Heart Check</a>
+        <a href="/predict/diabetes" class="btn btn-cyan btn-sm"><i class="fas fa-syringe"></i> New Diabetes Check</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div style="display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;">
+    <button class="filter-btn btn btn-primary btn-sm" data-filter="all" onclick="filterReports('all')"><i class="fas fa-list"></i> All</button>
+    <button class="filter-btn btn btn-glass btn-sm" data-filter="heart" onclick="filterReports('heart')"><i class="fas fa-heartbeat"></i> Heart</button>
+    <button class="filter-btn btn btn-glass btn-sm" data-filter="diabetes" onclick="filterReports('diabetes')"><i class="fas fa-syringe"></i> Diabetes</button>
+    <button class="filter-btn btn btn-glass btn-sm" data-filter="High Risk" onclick="filterReports('High Risk')"><i class="fas fa-exclamation-triangle"></i> High Risk</button>
+  </div>
+
+  {% if reports %}
+  <div id="reportsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;">
+    {% for r in reports %}
+    <div class="glass report-card" 
+         data-type="{{ r.report_type }}" data-risk="{{ r.risk_level }}"
+         style="padding:28px;transition:transform 0.3s;" 
+         onmouseenter="this.style.transform='translateY(-4px)'" 
+         onmouseleave="this.style.transform='translateY(0)'">
+      
+      <!-- Header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+            background:{% if r.report_type=='heart' %}rgba(255,107,107,0.15){% else %}rgba(0,212,255,0.15){% endif %};
+            border:1px solid {% if r.report_type=='heart' %}rgba(255,107,107,0.3){% else %}rgba(0,212,255,0.3){% endif %};">
+            <i class="fas {% if r.report_type=='heart' %}fa-heartbeat{% else %}fa-syringe{% endif %}" 
+               style="color:{% if r.report_type=='heart' %}var(--red){% else %}var(--cyan){% endif %};font-size:1.1rem;"></i>
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:0.95rem;">{{ r.patient_name or 'Unknown' }}</div>
+            <div style="font-size:0.8rem;color:var(--muted);">{{ r.report_type|title }} · Age {{ r.patient_age or '—' }} · {{ r.patient_gender or '—' }}</div>
+          </div>
+        </div>
+        <span class="badge {% if r.risk_level == 'Low Risk' %}badge-low{% elif r.risk_level == 'Moderate Risk' %}badge-moderate{% else %}badge-high{% endif %}">
+          {{ r.risk_level }}
+        </span>
+      </div>
+
+      <!-- Prediction -->
+      <div style="padding:14px;background:rgba(255,255,255,0.04);border-radius:10px;margin-bottom:14px;">
+        <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Prediction</div>
+        <div style="font-size:0.9rem;font-weight:600;">{{ r.prediction }}</div>
+      </div>
+
+      <!-- Probability Bar -->
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:0.8rem;color:var(--muted);">Risk Probability</span>
+          <span style="font-size:0.8rem;font-weight:700;
+            color:{% if r.risk_level=='Low Risk' %}var(--green){% elif r.risk_level=='Moderate Risk' %}var(--yellow){% else %}var(--red){% endif %};">
+            {{ (r.probability * 100)|round(1) }}%
+          </span>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:{{ (r.probability * 100)|round(0) }}%;border-radius:3px;
+            background:{% if r.risk_level=='Low Risk' %}var(--green){% elif r.risk_level=='Moderate Risk' %}var(--yellow){% else %}var(--red){% endif %};
+            transition:width 0.8s ease;"></div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:0.8rem;color:var(--muted);"><i class="fas fa-calendar-alt"></i> {{ r.created_at[:16] }}</div>
+        {% if r.report_file %}
+        <a href="/download/{{ r.report_file }}" class="btn btn-green btn-sm"><i class="fas fa-download"></i> PDF</a>
+        {% else %}
+        <span style="font-size:0.8rem;color:var(--muted);">No PDF</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="glass" style="padding:80px;text-align:center;">
+    <i class="fas fa-file-medical" style="font-size:4rem;color:var(--muted);margin-bottom:20px;display:block;opacity:0.5;"></i>
+    <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:12px;">No Reports Yet</h3>
+    <p style="color:var(--muted);margin-bottom:32px;">Run your first health prediction to generate a report</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+      <a href="/predict/heart" class="btn btn-primary"><i class="fas fa-heartbeat"></i> Heart Disease Detection</a>
+      <a href="/predict/diabetes" class="btn btn-cyan"><i class="fas fa-syringe"></i> Diabetes Detection</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function filterReports(filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.className = b.dataset.filter === filter 
+      ? 'filter-btn btn btn-primary btn-sm' 
+      : 'filter-btn btn btn-glass btn-sm';
+  });
+  document.querySelectorAll('.report-card').forEach(card => {
+    const type = card.dataset.type;
+    const risk = card.dataset.risk;
+    let show = filter === 'all' || type === filter || risk === filter;
+    card.style.display = show ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}
