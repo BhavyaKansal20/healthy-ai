@@ -83,7 +83,7 @@ Open browser at: **http://localhost:5000**
 
 ### Diabetes Model
 - **Algorithm**: Gradient Boosting Classifier
-- **Dataset**: https://github.com/sarwansingh/Python/blob/742fdb55c37a84aa6411389145403bc6a1f17ff5/ClassExamples/data/diabetes.csv
+- **Dataset**: https://github.com/BhavyaKansal20/healthy-ai/blob/e464210b2f33e105eca1e0fcbdf60269266e666c/data_files/diabetes.csv
 - **Accuracy**: 97.22%  |  **ROC-AUC**: 97.64%
 - **Features**: 8 metabolic parameters
 - **Target**: Diabetes (0/1)
