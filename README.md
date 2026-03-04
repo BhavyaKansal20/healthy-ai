@@ -76,7 +76,7 @@ Open browser at: **http://localhost:5000**
 
 ### Heart Disease Model
 - **Algorithm**: Gradient Boosting Classifier
-- **Dataset**: https://github.com/sarwansingh/Python/blob/master/ClassExamples/data/HeartDiseasePrediction_dataset.csv
+- **Dataset**: https://github.com/BhavyaKansal20/healthy-ai/blob/9cbb1f38d1730fcba8700ffaa64822019d36b3c0/data_files/heart.csv
 - **Accuracy**: 83.74%  |  **ROC-AUC**: 68.10%
 - **Features**: 15 clinical parameters
 - **Target**: 10-Year CHD Risk (TenYearCHD)
