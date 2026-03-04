@@ -5,8 +5,8 @@
 - **Backend**: Python Flask + SQLite
 - **ML**: Gradient Boosting Classifier (scikit-learn)
 - **PDF Reports**: ReportLab
-- **Frontend**: Glassmorphism UI (HTML/CSS/JS)
-- **Database**: SQLite (zero-setup required)
+- **Frontend**: HTML/CSS/JS
+- **Database**: SQLite
 
 ---
 
@@ -113,12 +113,11 @@ Each prediction generates a PDF report containing:
 | Layer | Technology |
 |-------|-----------|
 | Web Framework | Flask 2.x |
-| Database | SQLite (via sqlite3) |
-| ML Library | scikit-learn (GradientBoosting) |
+| Database | SQLite |
+| ML Library | scikit-learn (GradientBoostingClassifier) |
 | PDF Generation | ReportLab |
 | Charts | Matplotlib |
-| Frontend | Vanilla JS + CSS Glassmorphism |
-| Fonts | Google Fonts (Outfit + Space Mono) |
+| Frontend | HTML / CSS / JS |
 
 ---
 
