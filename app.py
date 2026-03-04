@@ -21,18 +21,21 @@ import warnings
 warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
-app.secret_key = 'healthyai_secret_2026_secure'
+app.secret_key = os.environ.get('SECRET_KEY', 'healthyai_secret_2026_secure')
 
-BASE = os.path.dirname(__file__)
-MODELS_DIR = os.path.join(BASE, 'models')
+BASE        = os.path.dirname(__file__)
+MODELS_DIR  = os.path.join(BASE, 'models')
 REPORTS_DIR = os.path.join(BASE, 'static', 'reports')
-DB_PATH = os.path.join(BASE, 'healthyai.db')
+DB_PATH     = os.path.join(BASE, 'healthyai.db')
 os.makedirs(REPORTS_DIR, exist_ok=True)
+os.makedirs(MODELS_DIR,  exist_ok=True)
 
-# ─── Load or train models ──────────────────────────────────
-def load_or_train_models():
+# ─── Load models (trained during build via render.yaml) ────
+def load_models():
     heart_pkl = os.path.join(MODELS_DIR, 'heart_model.pkl')
     diab_pkl  = os.path.join(MODELS_DIR, 'diabetes_model.pkl')
+
+    # If models missing or incompatible, train now (fallback)
     need_train = not os.path.exists(heart_pkl) or not os.path.exists(diab_pkl)
     if not need_train:
         try:
@@ -40,26 +43,36 @@ def load_or_train_models():
             joblib.load(diab_pkl)
         except Exception:
             need_train = True
-            print("⚠️  Existing models are incompatible — retraining now...")
+            print("⚠️  Models incompatible — retraining...")
+
     if need_train:
+        print("🔄 Training models (fallback)...")
         import train_models
         train_models.train_heart()
         train_models.train_diabetes()
-        print("✅ Models trained successfully.")
+        print("✅ Models ready.")
 
-load_or_train_models()
+    global heart_model, heart_scaler, heart_meta
+    global diabetes_model, diabetes_scaler, diabetes_le_gender, diabetes_le_smoke, diabetes_meta
 
-heart_model        = joblib.load(os.path.join(MODELS_DIR, 'heart_model.pkl'))
-heart_scaler       = joblib.load(os.path.join(MODELS_DIR, 'heart_scaler.pkl'))
-with open(os.path.join(MODELS_DIR, 'heart_meta.json')) as f:
-    heart_meta = json.load(f)
+    heart_model        = joblib.load(os.path.join(MODELS_DIR, 'heart_model.pkl'))
+    heart_scaler       = joblib.load(os.path.join(MODELS_DIR, 'heart_scaler.pkl'))
+    with open(os.path.join(MODELS_DIR, 'heart_meta.json')) as f:
+        heart_meta = json.load(f)
 
-diabetes_model     = joblib.load(os.path.join(MODELS_DIR, 'diabetes_model.pkl'))
-diabetes_scaler    = joblib.load(os.path.join(MODELS_DIR, 'diabetes_scaler.pkl'))
-diabetes_le_gender = joblib.load(os.path.join(MODELS_DIR, 'diabetes_le_gender.pkl'))
-diabetes_le_smoke  = joblib.load(os.path.join(MODELS_DIR, 'diabetes_le_smoke.pkl'))
-with open(os.path.join(MODELS_DIR, 'diabetes_meta.json')) as f:
-    diabetes_meta = json.load(f)
+    diabetes_model     = joblib.load(os.path.join(MODELS_DIR, 'diabetes_model.pkl'))
+    diabetes_scaler    = joblib.load(os.path.join(MODELS_DIR, 'diabetes_scaler.pkl'))
+    diabetes_le_gender = joblib.load(os.path.join(MODELS_DIR, 'diabetes_le_gender.pkl'))
+    diabetes_le_smoke  = joblib.load(os.path.join(MODELS_DIR, 'diabetes_le_smoke.pkl'))
+    with open(os.path.join(MODELS_DIR, 'diabetes_meta.json')) as f:
+        diabetes_meta = json.load(f)
+
+# Declare globals first so gunicorn can import the module without blocking
+heart_model = heart_scaler = heart_meta = None
+diabetes_model = diabetes_scaler = diabetes_le_gender = diabetes_le_smoke = diabetes_meta = None
+
+# Load models — fast if already trained during build, trains if missing
+load_models()
 
 # ─── Database ──────────────────────────────────────────────
 def get_db():
@@ -110,12 +123,12 @@ def fig_to_b64(fig):
 PALETTE = ['#00d4ff', '#7c3aed', '#06d6a0', '#ff6b6b', '#ffd166', '#118ab2']
 
 def chart_feature_importance(meta, title):
-    fi = meta['feature_importance']
+    fi     = meta['feature_importance']
     labels = list(fi.keys())
-    vals = list(fi.values())
-    order = sorted(range(len(vals)), key=lambda i: vals[i])
+    vals   = list(fi.values())
+    order  = sorted(range(len(vals)), key=lambda i: vals[i])
     labels = [labels[i] for i in order]
-    vals = [vals[i] for i in order]
+    vals   = [vals[i]   for i in order]
     fig, ax = plt.subplots(figsize=(8, 5))
     fig.patch.set_alpha(0)
     ax.set_facecolor((0,0,0,0))
@@ -146,9 +159,9 @@ def chart_class_dist(meta, labels_map, title):
     return fig_to_b64(fig)
 
 def chart_correlation(meta, title):
-    corr = meta['correlation']
-    labels = list(corr.keys())
-    vals = list(corr.values())
+    corr       = meta['correlation']
+    labels     = list(corr.keys())
+    vals       = list(corr.values())
     colors_bar = [PALETTE[0] if v >= 0 else PALETTE[3] for v in vals]
     fig, ax = plt.subplots(figsize=(8, 4))
     fig.patch.set_alpha(0)
@@ -169,7 +182,7 @@ def get_eda_charts(model_type):
     if model_type == 'heart':
         df = pd.read_csv(os.path.join(BASE, 'data_files', 'heart.csv'))
         df.columns = df.columns.str.strip()
-        meta = heart_meta
+        meta       = heart_meta
         fi_chart   = chart_feature_importance(meta, 'Heart Disease')
         dist_chart = chart_class_dist(meta, {'0': 'No CHD', '1': 'CHD Risk'}, 'Heart Disease')
         corr_chart = chart_correlation(meta, 'Heart Disease')
@@ -177,8 +190,8 @@ def get_eda_charts(model_type):
         fig.patch.set_alpha(0)
         ax.set_facecolor((0,0,0,0))
         for target_val, color, lbl in [(0, PALETTE[0], 'No CHD'), (1, PALETTE[3], 'CHD')]:
-            ax.hist(df[df['TenYearCHD']==target_val]['age'].dropna(), bins=20,
-                    alpha=0.6, color=color, label=lbl)
+            ax.hist(df[df['TenYearCHD']==target_val]['age'].dropna(),
+                    bins=20, alpha=0.6, color=color, label=lbl)
         ax.set_xlabel('Age', color='white')
         ax.set_ylabel('Count', color='white')
         ax.set_title('Age Distribution by Outcome', color='white', fontsize=11)
@@ -189,7 +202,7 @@ def get_eda_charts(model_type):
         return {'fi': fi_chart, 'dist': dist_chart, 'corr': corr_chart, 'age': age_chart}
     else:
         df = pd.read_csv(os.path.join(BASE, 'data_files', 'diabetes.csv')).sample(5000, random_state=42)
-        meta = diabetes_meta
+        meta       = diabetes_meta
         fi_chart   = chart_feature_importance(meta, 'Diabetes')
         dist_chart = chart_class_dist(meta, {'0': 'No Diabetes', '1': 'Diabetes'}, 'Diabetes')
         corr_chart = chart_correlation(meta, 'Diabetes')
@@ -197,8 +210,8 @@ def get_eda_charts(model_type):
         fig.patch.set_alpha(0)
         ax.set_facecolor((0,0,0,0))
         for target_val, color, lbl in [(0, PALETTE[0], 'No Diabetes'), (1, PALETTE[3], 'Diabetes')]:
-            ax.hist(df[df['diabetes']==target_val]['bmi'].dropna(), bins=25,
-                    alpha=0.6, color=color, label=lbl)
+            ax.hist(df[df['diabetes']==target_val]['bmi'].dropna(),
+                    bins=25, alpha=0.6, color=color, label=lbl)
         ax.set_xlabel('BMI', color='white')
         ax.set_ylabel('Count', color='white')
         ax.set_title('BMI Distribution by Outcome', color='white', fontsize=11)
@@ -215,7 +228,7 @@ def gauge_chart(probability, risk_level):
     ax.set_facecolor((0,0,0,0))
     for t_start, t_end, col in [(np.pi, np.pi*2/3, '#06d6a0'),
                                  (np.pi*2/3, np.pi/3, '#ffd166'),
-                                 (np.pi/3, 0, '#ff6b6b')]:
+                                 (np.pi/3,   0,       '#ff6b6b')]:
         t = np.linspace(t_start, t_end, 50)
         ax.fill_between(t, 0.7, 1.0, color=col, alpha=0.7)
     needle_angle = np.pi * (1 - probability)
@@ -228,7 +241,8 @@ def gauge_chart(probability, risk_level):
     ax.text(np.pi/2, 1.25, f'{probability*100:.1f}%', ha='center', va='center',
             color='white', fontsize=16, fontweight='bold', transform=ax.transData)
     ax.text(np.pi/2, 1.45, risk_level, ha='center', va='center',
-            color={'Low Risk': '#06d6a0', 'Moderate Risk': '#ffd166', 'High Risk': '#ff6b6b'}.get(risk_level, 'white'),
+            color={'Low Risk': '#06d6a0', 'Moderate Risk': '#ffd166',
+                   'High Risk': '#ff6b6b'}.get(risk_level, 'white'),
             fontsize=10, transform=ax.transData)
     return fig_to_b64(fig)
 
@@ -240,11 +254,9 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     doc = SimpleDocTemplate(filepath, pagesize=A4,
                             rightMargin=2*cm, leftMargin=2*cm,
                             topMargin=2*cm, bottomMargin=2*cm)
-
     styles = getSampleStyleSheet()
     story  = []
 
-    # ── Styles ────────────────────────────────────────────
     title_style = ParagraphStyle('Title', parent=styles['Title'],
                                  fontSize=24, textColor=colors.HexColor('#7c3aed'),
                                  spaceAfter=6, alignment=TA_CENTER)
@@ -259,49 +271,52 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     disclaimer_style = ParagraphStyle('Disc', parent=styles['Normal'],
                                       fontSize=8, textColor=colors.HexColor('#888'),
                                       alignment=TA_CENTER, leading=12)
-    risk_color = {'Low Risk': '#06d6a0', 'Moderate Risk': '#f59e0b', 'High Risk': '#ef4444'}.get(risk_level, '#555')
+    risk_color = {'Low Risk': '#06d6a0', 'Moderate Risk': '#f59e0b',
+                  'High Risk': '#ef4444'}.get(risk_level, '#555')
 
-    # ── Logo ──────────────────────────────────────────────
+    # Logo
     logo_path = os.path.join(BASE, 'static', 'img', 'logo.png')
     if os.path.exists(logo_path):
         logo = Image(logo_path, width=60, height=60)
         logo.hAlign = 'CENTER'
         story.append(logo)
 
-    # ── Header ────────────────────────────────────────────
+    # Header
     story.append(Paragraph("Healthy AI", title_style))
     story.append(Paragraph("Advanced Health Prediction Report", subtitle_style))
-    story.append(HRFlowable(width='100%', thickness=2, color=colors.HexColor('#7c3aed'), spaceAfter=12))
+    story.append(HRFlowable(width='100%', thickness=2,
+                             color=colors.HexColor('#7c3aed'), spaceAfter=12))
 
-    # ── Report type ───────────────────────────────────────
+    # Report type
     story.append(Paragraph(
         f"Report Type: {'Heart Disease Prediction' if report_type == 'heart' else 'Diabetes Prediction'}",
         section_style))
 
-    # ── Meta table ────────────────────────────────────────
+    # Meta table
     meta_data = [
-        ['Report ID', f'HAI-{report_id:06d}', 'Date', datetime.now().strftime('%B %d, %Y')],
+        ['Report ID',    f'HAI-{report_id:06d}', 'Date',         datetime.now().strftime('%B %d, %Y')],
         ['Patient Name', patient_info.get('name', 'N/A'), 'Age', str(patient_info.get('age', 'N/A'))],
-        ['Gender', patient_info.get('gender', 'N/A'), 'Generated By', 'Healthy AI System'],
+        ['Gender',       patient_info.get('gender', 'N/A'), 'Generated By', 'Healthy AI System'],
     ]
     meta_table = Table(meta_data, colWidths=[3*cm, 6*cm, 3*cm, 5*cm])
     meta_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#f9f0ff')),
-        ('TEXTCOLOR',  (0,0), (-1,-1), colors.HexColor('#333')),
-        ('FONTNAME',   (0,0), (-1,-1), 'Helvetica'),
-        ('FONTSIZE',   (0,0), (-1,-1), 9),
-        ('GRID',       (0,0), (-1,-1), 0.5, colors.HexColor('#ddd')),
+        ('BACKGROUND',     (0,0), (-1,-1), colors.HexColor('#f9f0ff')),
+        ('TEXTCOLOR',      (0,0), (-1,-1), colors.HexColor('#333')),
+        ('FONTNAME',       (0,0), (-1,-1), 'Helvetica'),
+        ('FONTSIZE',       (0,0), (-1,-1), 9),
+        ('GRID',           (0,0), (-1,-1), 0.5, colors.HexColor('#ddd')),
         ('ROWBACKGROUNDS', (0,0), (-1,-1), [colors.HexColor('#f9f0ff'), colors.white]),
-        ('FONTNAME',   (0,0), (0,-1), 'Helvetica-Bold'),
-        ('FONTNAME',   (2,0), (2,-1), 'Helvetica-Bold'),
-        ('VALIGN',     (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING',    (0,0), (-1,-1), 6),
+        ('FONTNAME',       (0,0), (0,-1),  'Helvetica-Bold'),
+        ('FONTNAME',       (2,0), (2,-1),  'Helvetica-Bold'),
+        ('VALIGN',         (0,0), (-1,-1), 'MIDDLE'),
+        ('PADDING',        (0,0), (-1,-1), 6),
     ]))
     story.append(meta_table)
     story.append(Spacer(1, 12))
 
-    # ── Prediction result ─────────────────────────────────
-    story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#eee'), spaceAfter=8))
+    # Prediction result
+    story.append(HRFlowable(width='100%', thickness=1,
+                             color=colors.HexColor('#eee'), spaceAfter=8))
     story.append(Paragraph("Prediction Result", section_style))
     result_data = [
         ['Diagnosis',   prediction],
@@ -320,22 +335,23 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
         ('GRID',       (0,0), (-1,-1), 0.5, colors.HexColor('#ddd')),
         ('VALIGN',     (0,0), (-1,-1), 'MIDDLE'),
         ('PADDING',    (0,0), (-1,-1), 8),
-        ('TEXTCOLOR',  (1,1), (1,1), colors.HexColor(risk_color)),
+        ('TEXTCOLOR',  (1,1), (1,1),   colors.HexColor(risk_color)),
     ]))
     story.append(result_table)
     story.append(Spacer(1, 12))
 
-    # ── Input parameters ──────────────────────────────────
-    story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#eee'), spaceAfter=8))
+    # Input parameters
+    story.append(HRFlowable(width='100%', thickness=1,
+                             color=colors.HexColor('#eee'), spaceAfter=8))
     story.append(Paragraph("Input Parameters", section_style))
     param_rows = [['Parameter', 'Value']]
     for k, v in input_data.items():
         param_rows.append([k.replace('_', ' ').title(), str(v)])
     param_table = Table(param_rows, colWidths=[8*cm, 9*cm])
     param_table.setStyle(TableStyle([
-        ('BACKGROUND',     (0,0), (-1,0), colors.HexColor('#7c3aed')),
-        ('TEXTCOLOR',      (0,0), (-1,0), colors.white),
-        ('FONTNAME',       (0,0), (-1,0), 'Helvetica-Bold'),
+        ('BACKGROUND',     (0,0), (-1,0),  colors.HexColor('#7c3aed')),
+        ('TEXTCOLOR',      (0,0), (-1,0),  colors.white),
+        ('FONTNAME',       (0,0), (-1,0),  'Helvetica-Bold'),
         ('FONTNAME',       (0,1), (-1,-1), 'Helvetica'),
         ('FONTSIZE',       (0,0), (-1,-1), 9),
         ('GRID',           (0,0), (-1,-1), 0.5, colors.HexColor('#ddd')),
@@ -346,8 +362,9 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     story.append(param_table)
     story.append(Spacer(1, 12))
 
-    # ── Recommendations ───────────────────────────────────
-    story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#eee'), spaceAfter=8))
+    # Recommendations
+    story.append(HRFlowable(width='100%', thickness=1,
+                             color=colors.HexColor('#eee'), spaceAfter=8))
     story.append(Paragraph("Medical Recommendations", section_style))
     if report_type == 'heart':
         if risk_level == 'High Risk':
@@ -391,12 +408,13 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
         story.append(Paragraph(f"  {i}. {rec}", normal_style))
     story.append(Spacer(1, 16))
 
-    # ── Disclaimer ────────────────────────────────────────
-    story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#eee'), spaceAfter=8))
+    # Disclaimer
+    story.append(HRFlowable(width='100%', thickness=1,
+                             color=colors.HexColor('#eee'), spaceAfter=8))
     story.append(Paragraph(
-        "⚠️ DISCLAIMER: This report is generated by an AI system and is for informational purposes only. "
-        "It does not constitute medical advice. Please consult a qualified healthcare professional "
-        "for proper diagnosis and treatment.",
+        "⚠️ DISCLAIMER: This report is generated by an AI system and is for informational "
+        "purposes only. It does not constitute medical advice. Please consult a qualified "
+        "healthcare professional for proper diagnosis and treatment.",
         disclaimer_style))
     story.append(Spacer(1, 8))
     story.append(Paragraph("Generated by Healthy AI | © 2026 Healthy AI", disclaimer_style))
@@ -411,7 +429,8 @@ def index():
     user = None
     if logged_in():
         with get_db() as db:
-            user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
+            user = db.execute('SELECT * FROM users WHERE id=?',
+                              (session['user_id'],)).fetchone()
     return render_template('index.html', user=user)
 
 @app.route('/login', methods=['GET','POST'])
@@ -423,7 +442,7 @@ def login():
             user = db.execute('SELECT * FROM users WHERE email=? AND password=?',
                               (email, hash_pw(password))).fetchone()
         if user:
-            session['user_id'] = user['id']
+            session['user_id']   = user['id']
             session['user_name'] = user['name']
             return jsonify({'success': True, 'name': user['name']})
         return jsonify({'success': False, 'msg': 'Invalid credentials'})
@@ -440,7 +459,7 @@ def register():
                            (name, email, hash_pw(password)))
                 db.commit()
                 user = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
-            session['user_id'] = user['id']
+            session['user_id']   = user['id']
             session['user_name'] = user['name']
             return jsonify({'success': True, 'name': name})
         except sqlite3.IntegrityError:
@@ -457,9 +476,11 @@ def dashboard():
     if not logged_in():
         return redirect(url_for('index'))
     with get_db() as db:
-        user    = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
-        reports = db.execute('SELECT * FROM reports WHERE user_id=? ORDER BY created_at DESC LIMIT 20',
-                             (session['user_id'],)).fetchall()
+        user    = db.execute('SELECT * FROM users WHERE id=?',
+                             (session['user_id'],)).fetchone()
+        reports = db.execute(
+            'SELECT * FROM reports WHERE user_id=? ORDER BY created_at DESC LIMIT 20',
+            (session['user_id'],)).fetchall()
     return render_template('dashboard.html', user=user, reports=reports,
                            heart_meta=heart_meta, diabetes_meta=diabetes_meta)
 
@@ -491,35 +512,37 @@ def predict_heart():
         input_data = {k: v for k, v in d.items() if k != 'patient_name'}
         with get_db() as db:
             cursor = db.execute(
-                '''INSERT INTO reports (user_id, report_type, patient_name, patient_age, patient_gender,
-                   input_data, prediction, probability, risk_level)
+                '''INSERT INTO reports (user_id, report_type, patient_name, patient_age,
+                   patient_gender, input_data, prediction, probability, risk_level)
                    VALUES (?,?,?,?,?,?,?,?,?)''',
-                (session['user_id'], 'heart', patient['name'], patient['age'], patient['gender'],
-                 json.dumps(input_data), prediction_text, prob, risk))
+                (session['user_id'], 'heart', patient['name'], patient['age'],
+                 patient['gender'], json.dumps(input_data), prediction_text, prob, risk))
             db.commit()
             report_id = cursor.lastrowid
         display_data = {
-            'Gender':           patient['gender'],
-            'Age':              d['age'],
-            'Smoker':           'Yes' if d['currentSmoker'] == '1' else 'No',
-            'Cigs/Day':         d['cigsPerDay'],
-            'BP Meds':          'Yes' if d['BPMeds'] == '1' else 'No',
+            'Gender':            patient['gender'],
+            'Age':               d['age'],
+            'Smoker':            'Yes' if d['currentSmoker'] == '1' else 'No',
+            'Cigs/Day':          d['cigsPerDay'],
+            'BP Meds':           'Yes' if d['BPMeds'] == '1' else 'No',
             'Total Cholesterol': d['totChol'],
-            'Systolic BP':      d['sysBP'],
-            'Diastolic BP':     d['diaBP'],
-            'BMI':              d['BMI'],
-            'Heart Rate':       d['heartRate'],
-            'Glucose':          d['glucose'],
-            'Hypertension':     'Yes' if d['prevalentHyp'] == '1' else 'No',
+            'Systolic BP':       d['sysBP'],
+            'Diastolic BP':      d['diaBP'],
+            'BMI':               d['BMI'],
+            'Heart Rate':        d['heartRate'],
+            'Glucose':           d['glucose'],
+            'Hypertension':      'Yes' if d['prevalentHyp'] == '1' else 'No',
         }
-        pdf_file = generate_pdf_report('heart', patient, display_data, prediction_text, prob, risk, report_id)
+        pdf_file = generate_pdf_report('heart', patient, display_data,
+                                        prediction_text, prob, risk, report_id)
         with get_db() as db:
             db.execute('UPDATE reports SET report_file=? WHERE id=?', (pdf_file, report_id))
             db.commit()
         gauge = gauge_chart(prob, risk)
         return jsonify({
-            'success': True, 'prediction': prediction_text, 'probability': round(prob*100, 1),
-            'risk_level': risk, 'gauge_chart': gauge, 'report_id': report_id, 'pdf_file': pdf_file
+            'success': True, 'prediction': prediction_text,
+            'probability': round(prob*100, 1), 'risk_level': risk,
+            'gauge_chart': gauge, 'report_id': report_id, 'pdf_file': pdf_file
         })
     with get_db() as db:
         user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
@@ -553,35 +576,38 @@ def predict_diabetes():
         elif prob < 0.6: risk = 'Moderate Risk'
         else:            risk = 'High Risk'
         prediction_text = 'Diabetes Risk Detected' if pred else 'No Significant Diabetes Risk'
-        patient    = {'name': d.get('patient_name', 'Patient'), 'age': d['age'], 'gender': gender_str}
+        patient    = {'name': d.get('patient_name', 'Patient'),
+                      'age': d['age'], 'gender': gender_str}
         input_data = {k: v for k, v in d.items() if k != 'patient_name'}
         with get_db() as db:
             cursor = db.execute(
-                '''INSERT INTO reports (user_id, report_type, patient_name, patient_age, patient_gender,
-                   input_data, prediction, probability, risk_level)
+                '''INSERT INTO reports (user_id, report_type, patient_name, patient_age,
+                   patient_gender, input_data, prediction, probability, risk_level)
                    VALUES (?,?,?,?,?,?,?,?,?)''',
-                (session['user_id'], 'diabetes', patient['name'], patient['age'], patient['gender'],
-                 json.dumps(input_data), prediction_text, prob, risk))
+                (session['user_id'], 'diabetes', patient['name'], patient['age'],
+                 patient['gender'], json.dumps(input_data), prediction_text, prob, risk))
             db.commit()
             report_id = cursor.lastrowid
         display_data = {
-            'Gender':               gender_str,
-            'Age':                  d['age'],
-            'Hypertension':         'Yes' if d['hypertension'] == '1' else 'No',
+            'Gender':                gender_str,
+            'Age':                   d['age'],
+            'Hypertension':          'Yes' if d['hypertension'] == '1' else 'No',
             'Heart Disease History': 'Yes' if d['heart_disease'] == '1' else 'No',
-            'Smoking History':      smoking_str,
-            'BMI':                  d['bmi'],
-            'HbA1c Level':          d['HbA1c_level'],
-            'Blood Glucose Level':  d['blood_glucose_level'],
+            'Smoking History':       smoking_str,
+            'BMI':                   d['bmi'],
+            'HbA1c Level':           d['HbA1c_level'],
+            'Blood Glucose Level':   d['blood_glucose_level'],
         }
-        pdf_file = generate_pdf_report('diabetes', patient, display_data, prediction_text, prob, risk, report_id)
+        pdf_file = generate_pdf_report('diabetes', patient, display_data,
+                                        prediction_text, prob, risk, report_id)
         with get_db() as db:
             db.execute('UPDATE reports SET report_file=? WHERE id=?', (pdf_file, report_id))
             db.commit()
         gauge = gauge_chart(prob, risk)
         return jsonify({
-            'success': True, 'prediction': prediction_text, 'probability': round(prob*100, 1),
-            'risk_level': risk, 'gauge_chart': gauge, 'report_id': report_id, 'pdf_file': pdf_file
+            'success': True, 'prediction': prediction_text,
+            'probability': round(prob*100, 1), 'risk_level': risk,
+            'gauge_chart': gauge, 'report_id': report_id, 'pdf_file': pdf_file
         })
     with get_db() as db:
         user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
@@ -600,9 +626,11 @@ def eda(model_type):
 def reports():
     if not logged_in(): return redirect(url_for('index'))
     with get_db() as db:
-        user        = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
-        all_reports = db.execute('SELECT * FROM reports WHERE user_id=? ORDER BY created_at DESC',
-                                 (session['user_id'],)).fetchall()
+        user        = db.execute('SELECT * FROM users WHERE id=?',
+                                 (session['user_id'],)).fetchone()
+        all_reports = db.execute(
+            'SELECT * FROM reports WHERE user_id=? ORDER BY created_at DESC',
+            (session['user_id'],)).fetchall()
     return render_template('reports.html', user=user, reports=all_reports)
 
 @app.route('/download/<filename>')
@@ -617,18 +645,24 @@ def download_report(filename):
 def api_stats():
     if not logged_in(): return jsonify({'error': 'unauthorized'})
     with get_db() as db:
-        total         = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=?", (session['user_id'],)).fetchone()['c']
-        heart_count   = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='heart'", (session['user_id'],)).fetchone()['c']
-        diabetes_count= db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='diabetes'", (session['user_id'],)).fetchone()['c']
-        high_risk     = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND risk_level='High Risk'", (session['user_id'],)).fetchone()['c']
-    return jsonify({'total': total, 'heart': heart_count, 'diabetes': diabetes_count, 'high_risk': high_risk})
+        total          = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=?",
+                                    (session['user_id'],)).fetchone()['c']
+        heart_count    = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='heart'",
+                                    (session['user_id'],)).fetchone()['c']
+        diabetes_count = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='diabetes'",
+                                    (session['user_id'],)).fetchone()['c']
+        high_risk      = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND risk_level='High Risk'",
+                                    (session['user_id'],)).fetchone()['c']
+    return jsonify({'total': total, 'heart': heart_count,
+                    'diabetes': diabetes_count, 'high_risk': high_risk})
 
 @app.route('/terms')
 def terms():
     user = None
     if logged_in():
         with get_db() as db:
-            user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
+            user = db.execute('SELECT * FROM users WHERE id=?',
+                              (session['user_id'],)).fetchone()
     return render_template('terms.html', user=user)
 
 @app.route('/privacy')
@@ -636,7 +670,8 @@ def privacy():
     user = None
     if logged_in():
         with get_db() as db:
-            user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
+            user = db.execute('SELECT * FROM users WHERE id=?',
+                              (session['user_id'],)).fetchone()
     return render_template('privacy.html', user=user)
 
 if __name__ == '__main__':
