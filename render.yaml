@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: healthyai
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python train_models.py
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1
+    envVars:
+      - key: SECRET_KEY
+        value: healthyai2026secure
+      - key: PYTHON_VERSION
+        value: 3.11.0
