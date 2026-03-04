@@ -9,8 +9,3 @@
     "restartPolicyType": "ON_FAILURE"
   }
 }
-```
-
-**Also check Railway dashboard** → your service → **"Settings"** → **"Start Command"** — make sure it says:
-```
-gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1
