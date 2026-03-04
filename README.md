@@ -76,14 +76,14 @@ Open browser at: **http://localhost:5000**
 
 ### Heart Disease Model
 - **Algorithm**: Gradient Boosting Classifier
-- **Dataset**: Framingham Heart Study (4,238 records)
+- **Dataset**: https://github.com/sarwansingh/Python/blob/master/ClassExamples/data/HeartDiseasePrediction_dataset.csv
 - **Accuracy**: 83.74%  |  **ROC-AUC**: 68.10%
 - **Features**: 15 clinical parameters
 - **Target**: 10-Year CHD Risk (TenYearCHD)
 
 ### Diabetes Model
 - **Algorithm**: Gradient Boosting Classifier
-- **Dataset**: 100,000 patient records
+- **Dataset**: https://github.com/sarwansingh/Python/blob/742fdb55c37a84aa6411389145403bc6a1f17ff5/ClassExamples/data/diabetes.csv
 - **Accuracy**: 97.22%  |  **ROC-AUC**: 97.64%
 - **Features**: 8 metabolic parameters
 - **Target**: Diabetes (0/1)
