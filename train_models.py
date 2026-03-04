@@ -155,6 +155,6 @@ def train_diabetes():
 if __name__ == '__main__':
     print("Training Heart Disease model...")
     train_heart()
-    print("\nTraining Diabetes model...")
+    print("Training Diabetes model...")
     train_diabetes()
-    print("\nAll models trained and saved!")
+    print("All models trained and saved!")
