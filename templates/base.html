@@ -193,160 +193,12 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 3px; }
+
   /* ══════════════════════════════════════
-   MOBILE RESPONSIVE — SITE WIDE
-   ══════════════════════════════════════ */
+     FEEDBACK BUTTON & MODAL — desktop styles
+     (yeh media query ke BAHAR hain — sahi jagah)
+     ══════════════════════════════════════ */
 
-@media (max-width: 768px) {
-
-  /* ── Navbar ── */
-  nav.navbar {
-    padding: 10px 16px;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .nav-brand span { font-size: 1.1rem; }
-  .nav-brand img  { height: 28px; }
-
-  /* Hide all nav links except logout/signin button */
-  .nav-links a:not(.btn-nav) { display: none; }
-  .nav-links .btn-nav {
-    padding: 7px 16px;
-    font-size: 0.85rem;
-  }
-
-  /* ── Main content spacing ── */
-  main { padding-top: 70px; }
-
-  /* ── All containers full width ── */
-  .container, .wrap,
-  [class*="container"],
-  [class*="content"],
-  [class*="wrapper"],
-  [class*="inner"] {
-    padding-left: 16px !important;
-    padding-right: 16px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* ── All grids → single column ── */
-  [class*="grid"],
-  [class*="cards"],
-  [class*="stats"] {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-
-  /* ── All flex rows → column ── */
-  [class*="row"]:not(.star-row):not(.helpful-row):not(.fb-radio-group) {
-    flex-direction: column !important;
-    gap: 12px !important;
-  }
-
-  /* ── Typography ── */
-  h1 { font-size: clamp(1.6rem, 5vw, 2.2rem) !important; line-height: 1.2 !important; }
-  h2 { font-size: clamp(1.3rem, 4vw, 1.7rem) !important; }
-  h3 { font-size: clamp(1rem,   3vw, 1.3rem) !important; }
-  p  { font-size: 0.9rem !important; line-height: 1.6 !important; }
-
-  /* ── Inputs — 16px stops iOS zoom ── */
-  input, select, textarea, .form-input, .fb-input {
-    font-size: 16px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* ── Buttons full width on mobile ── */
-  .btn {
-    width: 100% !important;
-    justify-content: center !important;
-    min-height: 48px !important;
-    font-size: 0.9rem !important;
-  }
-
-  /* ── Cards ── */
-  .glass, .stat-card, .card,
-  [class*="card"] {
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding: 16px !important;
-    border-radius: 16px !important;
-  }
-
-  /* ── Modals (login/register) ── */
-  #loginModal > div,
-  #registerModal > div {
-    width: 94vw !important;
-    padding: 28px 20px !important;
-    max-height: 90vh !important;
-    overflow-y: auto !important;
-  }
-
-  /* ── Feedback modal ── */
-  #feedbackModal {
-    width: 94vw !important;
-    padding: 24px 18px !important;
-  }
-  .fb-radio-group {
-    flex-direction: column !important;
-    gap: 8px !important;
-  }
-  .star-row span { font-size: 1.6rem !important; }
-
-  /* ── Feedback button position ── */
-  #feedbackBtn {
-    bottom: 16px !important;
-    right: 16px !important;
-    width: 50px !important;
-    height: 50px !important;
-    font-size: 1.2rem !important;
-  }
-
-  /* ── Tables scrollable ── */
-  table {
-    display: block !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    white-space: nowrap !important;
-  }
-
-  /* ── Images ── */
-  img, canvas, svg {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-
-  /* ── Stat cards ── */
-  .stat-number { font-size: 1.8rem !important; }
-  .stat-label  { font-size: 0.8rem !important; }
-
-  /* ── Toast notification ── */
-  #toast {
-    bottom: 16px !important;
-    right: 16px !important;
-    left: 16px !important;
-    max-width: 100% !important;
-    font-size: 0.85rem !important;
-  }
-
-  /* ── Orbs smaller on mobile (performance) ── */
-  .orb-1 { width: 250px !important; height: 250px !important; }
-  .orb-2 { width: 200px !important; height: 200px !important; }
-  .orb-3 { width: 150px !important; height: 150px !important; }
-}
-
-/* ── Very small phones (iPhone SE etc) ── */
-@media (max-width: 380px) {
-  nav.navbar { padding: 8px 12px; }
-  .nav-brand span { font-size: 1rem; }
-  h1 { font-size: 1.4rem !important; }
-  .glass, [class*="card"] { padding: 14px !important; }
-  #feedbackBtn { width: 44px !important; height: 44px !important; font-size: 1rem !important; }
-}
-
-  /* ── FEEDBACK BUTTON ── */
   #feedbackBtn {
     position: fixed;
     bottom: 28px;
@@ -375,7 +227,6 @@
     50%       { box-shadow: 0 4px 36px rgba(0,212,255,0.65); }
   }
 
-  /* ── FEEDBACK MODAL OVERLAY ── */
   #feedbackOverlay {
     display: none;
     position: fixed;
@@ -388,7 +239,6 @@
   }
   #feedbackOverlay.open { display: flex; }
 
-  /* ── FEEDBACK MODAL BOX ── */
   #feedbackModal {
     width: 460px;
     max-width: 92vw;
@@ -432,7 +282,6 @@
   }
   .fb-input:focus { border-color: var(--purple); }
 
-  /* Radio pill buttons */
   .fb-radio-group { display: flex; gap: 10px; }
   .fb-radio-group label {
     flex: 1; padding: 10px 8px;
@@ -451,7 +300,6 @@
     color: var(--text);
   }
 
-  /* Star rating */
   .star-row { display: flex; gap: 6px; }
   .star-row span {
     font-size: 1.8rem; cursor: pointer;
@@ -460,7 +308,6 @@
   .star-row span.active { opacity: 1; }
   .star-row span:hover { transform: scale(1.15); }
 
-  /* Helpful buttons */
   .helpful-row { display: flex; gap: 10px; }
   .helpful-btn {
     flex: 1; padding: 10px;
@@ -478,7 +325,6 @@
     background: rgba(255,107,107,0.12); color: var(--red);
   }
 
-  /* Report checkbox row */
   .fb-check-row {
     padding: 13px 14px;
     background: rgba(0,212,255,0.05);
@@ -490,7 +336,6 @@
   .fb-check-row input[type=checkbox] { accent-color: var(--cyan); width: 16px; height: 16px; cursor: pointer; }
   .fb-check-row span { font-size: 0.88rem; color: var(--cyan); font-weight: 500; }
 
-  /* Submit button */
   #fbSubmitBtn {
     width: 100%; padding: 13px;
     background: linear-gradient(135deg, var(--purple), var(--cyan));
@@ -503,10 +348,168 @@
   #fbSubmitBtn:hover { opacity: 0.9; transform: translateY(-1px); }
   #fbSubmitBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-  /* Success state */
   #fbSuccess {
     display: none; text-align: center; padding: 20px 0;
   }
+
+  /* ══════════════════════════════════════
+     MOBILE RESPONSIVE — SITE WIDE
+     max-width: 768px
+     ══════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* ── Navbar ── */
+    nav.navbar {
+      padding: 10px 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .nav-brand span { font-size: 1.1rem; }
+    .nav-brand img  { height: 28px; }
+    .nav-links a:not(.btn-nav) { display: none; }
+    .nav-links .btn-nav {
+      padding: 7px 16px;
+      font-size: 0.85rem;
+    }
+
+    /* ── Main ── */
+    main { padding-top: 70px; }
+
+    /* ── Containers full width ── */
+    .container, .wrap,
+    [class*="container"],
+    [class*="content"],
+    [class*="wrapper"],
+    [class*="inner"] {
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    /* ── Grids → single column ── */
+    [class*="grid"],
+    [class*="cards"],
+    [class*="stats"] {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+
+    /* ── Flex rows → column (except feedback UI rows) ── */
+    [class*="row"]:not(.star-row):not(.helpful-row):not(.fb-radio-group) {
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+
+    /* ── Typography ── */
+    h1 { font-size: clamp(1.6rem, 5vw, 2.2rem) !important; line-height: 1.2 !important; }
+    h2 { font-size: clamp(1.3rem, 4vw, 1.7rem) !important; }
+    h3 { font-size: clamp(1rem,   3vw, 1.3rem) !important; }
+    p  { font-size: 0.9rem !important; line-height: 1.6 !important; }
+
+    /* ── Inputs — 16px stops iOS zoom on focus ── */
+    input, select, textarea, .form-input, .fb-input {
+      font-size: 16px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100% !important;
+      justify-content: center !important;
+      min-height: 48px !important;
+      font-size: 0.9rem !important;
+    }
+
+    /* ── Cards ── */
+    .glass, .stat-card, .card,
+    [class*="card"] {
+      width: 100% !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      padding: 16px !important;
+      border-radius: 16px !important;
+    }
+
+    /* ── Login/Register modals ── */
+    #loginModal > div,
+    #registerModal > div {
+      width: 94vw !important;
+      padding: 28px 20px !important;
+      max-height: 90vh !important;
+      overflow-y: auto !important;
+    }
+
+    /* ── Feedback modal ── */
+    #feedbackModal {
+      width: 94vw !important;
+      padding: 24px 18px !important;
+    }
+    .fb-radio-group {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    .star-row span { font-size: 1.6rem !important; }
+
+    /* ── Feedback button ── */
+    #feedbackBtn {
+      bottom: 16px !important;
+      right: 16px !important;
+      width: 50px !important;
+      height: 50px !important;
+      font-size: 1.2rem !important;
+    }
+
+    /* ── Tables scrollable ── */
+    table {
+      display: block !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      white-space: nowrap !important;
+    }
+
+    /* ── Images & charts ── */
+    img, canvas, svg {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    /* ── Stat cards ── */
+    .stat-number { font-size: 1.8rem !important; }
+    .stat-label  { font-size: 0.8rem !important; }
+
+    /* ── Toast ── */
+    #toast {
+      bottom: 16px !important;
+      right: 16px !important;
+      left: 16px !important;
+      max-width: 100% !important;
+      font-size: 0.85rem !important;
+    }
+
+    /* ── Orbs smaller for performance ── */
+    .orb-1 { width: 250px !important; height: 250px !important; }
+    .orb-2 { width: 200px !important; height: 200px !important; }
+    .orb-3 { width: 150px !important; height: 150px !important; }
+  }
+
+  /* ══════════════════════════════════════
+     VERY SMALL PHONES — iPhone SE etc
+     max-width: 380px
+     ══════════════════════════════════════ */
+  @media (max-width: 380px) {
+    nav.navbar { padding: 8px 12px; }
+    .nav-brand span { font-size: 1rem; }
+    h1 { font-size: 1.4rem !important; }
+    .glass, [class*="card"] { padding: 14px !important; }
+    #feedbackBtn {
+      width: 44px !important;
+      height: 44px !important;
+      font-size: 1rem !important;
+    }
+  }
+
 </style>
 {% block extra_head %}{% endblock %}
 </head>
@@ -576,40 +579,28 @@
 
 <div id="toast"></div>
 
-<!-- ══════════════════════════════════════════
-     FEEDBACK FLOATING BUTTON
-     Har page ke bottom-right mein dikhega
-     ══════════════════════════════════════════ -->
 <button id="feedbackBtn" onclick="openFeedback()" title="Share your feedback">
   💬
 </button>
 
-<!-- ══════════════════════════════════════════
-     FEEDBACK MODAL OVERLAY
-     ══════════════════════════════════════════ -->
 <div id="feedbackOverlay" onclick="overlayClose(event)">
   <div id="feedbackModal">
 
-    <!-- Close button -->
     <button class="fb-close" onclick="closeFeedback()">✕</button>
 
-    <!-- Header -->
     <div style="margin-bottom:24px;">
       <p style="font-size:0.78rem;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Healthy AI</p>
       <h2 style="font-size:1.35rem;font-weight:800;color:var(--text);">Share your experience ✨</h2>
       <p style="font-size:0.85rem;color:var(--muted);margin-top:4px;">Takes 30 seconds — helps us improve!</p>
     </div>
 
-    <!-- Form (shown first) -->
     <div id="fbForm">
 
-      <!-- Name -->
       <div style="margin-bottom:16px;">
         <label class="fb-label">Your Name</label>
         <input id="fbName" class="fb-input" type="text" placeholder="Bhavya Kansal">
       </div>
 
-      <!-- What did you predict -->
       <div style="margin-bottom:16px;">
         <label class="fb-label">What did you predict?</label>
         <div class="fb-radio-group">
@@ -628,7 +619,6 @@
         </div>
       </div>
 
-      <!-- Star Rating -->
       <div style="margin-bottom:16px;">
         <label class="fb-label">Rate your experience</label>
         <div class="star-row" id="starRow">
@@ -640,7 +630,6 @@
         </div>
       </div>
 
-      <!-- Was this helpful -->
       <div style="margin-bottom:16px;">
         <label class="fb-label">Was this helpful?</label>
         <div class="helpful-row">
@@ -649,7 +638,6 @@
         </div>
       </div>
 
-      <!-- Message -->
       <div style="margin-bottom:16px;">
         <label class="fb-label">Leave a message</label>
         <textarea id="fbMessage" class="fb-input" rows="3"
@@ -657,7 +645,6 @@
           style="resize:none;"></textarea>
       </div>
 
-      <!-- Get reports checkbox -->
       <div style="margin-bottom:20px;">
         <label class="fb-check-row">
           <input type="checkbox" id="fbGetReports">
@@ -665,14 +652,12 @@
         </label>
       </div>
 
-      <!-- Submit -->
       <button id="fbSubmitBtn" onclick="submitFeedback()">
         Submit Feedback ✨
       </button>
 
-    </div><!-- end #fbForm -->
+    </div>
 
-    <!-- Success state (hidden initially) -->
     <div id="fbSuccess">
       <div style="font-size:3.5rem;margin-bottom:16px;">🎉</div>
       <h3 style="font-size:1.3rem;font-weight:800;color:var(--green);margin-bottom:8px;">Thank you!</h3>
@@ -685,15 +670,12 @@
       </button>
     </div>
 
-  </div><!-- end #feedbackModal -->
-</div><!-- end #feedbackOverlay -->
+  </div>
+</div>
 
 <main>{% block content %}{% endblock %}</main>
 
 <script>
-/* ════════════════════════════════════
-   AUTH MODAL FUNCTIONS (original)
-   ════════════════════════════════════ */
 function openModal(id) {
   const m = document.getElementById(id);
   m.style.display = 'flex';
@@ -749,74 +731,50 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ════════════════════════════════════
-   FEEDBACK MODAL LOGIC
-   ════════════════════════════════════ */
+let fbRating   = 0;
+let fbHelpful  = '';
+let fbPredType = '';
 
-// State variables — yeh variables form ka data store karte hain
-let fbRating     = 0;       // 1-5 star rating
-let fbHelpful    = '';      // 'Yes' or 'No'
-let fbPredType   = '';      // 'Heart Disease', 'Diabetes', 'Both'
-
-// Feedback modal kholna
 function openFeedback() {
   document.getElementById('feedbackOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden'; // background scroll band
+  document.body.style.overflow = 'hidden';
 }
-
-// Feedback modal band karna
 function closeFeedback() {
   document.getElementById('feedbackOverlay').classList.remove('open');
   document.body.style.overflow = '';
   setTimeout(resetFeedbackForm, 400);
 }
-
-// Success ke baad close karo aur /reports pe redirect karo
 function closeFeedbackAndGoReports() {
   document.getElementById('feedbackOverlay').classList.remove('open');
   document.body.style.overflow = '';
   window.location.href = '/reports';
 }
-
-// Prediction pages yeh call karein — result show hone ke 2.5 sec baad auto open hoga
 function autoOpenFeedback() {
   setTimeout(function() { openFeedback(); }, 2500);
 }
-
-// Overlay pe click karo toh band ho — lekin modal pe click karo toh nahi
 function overlayClose(e) {
   if (e.target.id === 'feedbackOverlay') closeFeedback();
 }
-
-// Form reset — dobara open karne ke liye fresh state
 function resetFeedbackForm() {
   fbRating = 0; fbHelpful = ''; fbPredType = '';
   document.getElementById('fbName').value = '';
   document.getElementById('fbMessage').value = '';
   document.getElementById('fbGetReports').checked = false;
-  // Stars reset
   document.querySelectorAll('.star-row span').forEach(s => s.classList.remove('active'));
-  // Helpful buttons reset
   document.querySelectorAll('.helpful-btn').forEach(b => b.classList.remove('selected'));
-  // Radio reset
   document.querySelectorAll('input[name=fbPredType]').forEach(r => r.checked = false);
-  // Show form, hide success
   document.getElementById('fbForm').style.display = 'block';
   document.getElementById('fbSuccess').style.display = 'none';
   document.getElementById('fbSubmitBtn').disabled = false;
   document.getElementById('fbSubmitBtn').textContent = 'Submit Feedback ✨';
 }
-
-// Prediction type select karna
 function selectPrediction(type) {
   fbPredType = type;
-  // Sab labels ko dim karo, selected ko highlight karo
   document.querySelectorAll('.fb-radio-group label').forEach(l => {
     l.style.borderColor = 'rgba(255,255,255,0.1)';
     l.style.background  = 'rgba(255,255,255,0.04)';
     l.style.color       = 'var(--muted)';
   });
-  // Active label dhundho aur highlight karo
   const labels = document.querySelectorAll('.fb-radio-group label');
   const map = {'Heart Disease': 0, 'Diabetes': 1, 'Both': 2};
   const idx = map[type];
@@ -826,44 +784,32 @@ function selectPrediction(type) {
     labels[idx].style.color       = 'var(--text)';
   }
 }
-
-// Star rating set karna
 function setRating(n) {
   fbRating = n;
-  // Sab stars ko active ya inactive banao
   document.querySelectorAll('.star-row span').forEach((s, i) => {
     s.classList.toggle('active', i < n);
   });
 }
-
-// Helpful Yes/No set karna
 function setHelpful(val) {
   fbHelpful = val;
   document.querySelectorAll('.helpful-btn').forEach(b => b.classList.remove('selected'));
-  // Sahi button ko selected class do
   const btn = val === 'Yes'
     ? document.querySelector('.helpful-btn.yes')
     : document.querySelector('.helpful-btn.no');
   if (btn) btn.classList.add('selected');
 }
-
-// Form submit karna — seedha browser se Google Apps Script ko call karta hai
-// Flask backend bypass — Render pe outgoing calls blocked hoti hain
 async function submitFeedback() {
   const name    = document.getElementById('fbName').value.trim();
   const message = document.getElementById('fbMessage').value.trim();
   const wantRep = document.getElementById('fbGetReports').checked;
-
   if (!name) {
     showToast('Please enter your name!', 'error');
     document.getElementById('fbName').focus();
     return;
   }
-
   const btn = document.getElementById('fbSubmitBtn');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
-
   const payload = {
     name:            name,
     prediction_type: fbPredType  || 'Not specified',
@@ -872,24 +818,16 @@ async function submitFeedback() {
     message:         message     || 'No message',
     get_reports:     wantRep ? 'Yes' : 'No'
   };
-
-  // Google Apps Script URL — seedha browser se POST karo, Flask bypass
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwavNMreUplQA7NAZj5_SAJd4Sigkk633zyPYk9PFf4B4v6k2JPVI9XFHyeLjyew2w3yQ/exec';
-
   try {
-    // no-cors mode use karo — Google Script CORS headers nahi bhejta
-    // response read nahi hogi but data sheet mein save ho jaayega
     await fetch(SCRIPT_URL, {
       method:  'POST',
       mode:    'no-cors',
       headers: {'Content-Type': 'application/json'},
       body:    JSON.stringify(payload)
     });
-
-    // no-cors mein response hamesha opaque hoti hai — success maano
     document.getElementById('fbForm').style.display    = 'none';
     document.getElementById('fbSuccess').style.display = 'block';
-
   } catch (err) {
     showToast('Something went wrong. Try again!', 'error');
     btn.disabled = false;
