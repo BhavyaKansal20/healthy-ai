@@ -415,7 +415,7 @@
       <h2 style="font-size:1.5rem;font-weight:800;">Create Account</h2>
       <p style="color:var(--muted);font-size:0.9rem;margin-top:4px;">Join Healthy AI for free</p>
     </div>
-    <div class="form-group"><label>Full Name</label><input type="text" id="regName" class="form-input" placeholder="Bhavya Kansal"></div>
+    <div class="form-group"><label>Full Name</label><input type="text" id="regName" class="form-input" placeholder="Dr. John Smith"></div>
     <div class="form-group"><label>Email</label><input type="email" id="regEmail" class="form-input" placeholder="you@example.com"></div>
     <div class="form-group"><label>Password</label><input type="password" id="regPw" class="form-input" placeholder="••••••••"></div>
     <button class="btn btn-cyan" style="width:100%;justify-content:center;" onclick="doRegister()"><i class="fas fa-user-plus"></i> Create Account</button>
@@ -458,7 +458,7 @@
       <!-- Name -->
       <div style="margin-bottom:16px;">
         <label class="fb-label">Your Name</label>
-        <input id="fbName" class="fb-input" type="text" placeholder="Bhavya Kansal">
+        <input id="fbName" class="fb-input" type="text" placeholder="John Doe">
       </div>
 
       <!-- What did you predict -->
@@ -699,25 +699,23 @@ function setHelpful(val) {
   if (btn) btn.classList.add('selected');
 }
 
-// Form submit karna — Flask route pe POST karta hai
+// Form submit karna — seedha browser se Google Apps Script ko call karta hai
+// Flask backend bypass — Render pe outgoing calls blocked hoti hain
 async function submitFeedback() {
   const name    = document.getElementById('fbName').value.trim();
   const message = document.getElementById('fbMessage').value.trim();
   const wantRep = document.getElementById('fbGetReports').checked;
 
-  // Basic validation — name zaroori hai
   if (!name) {
     showToast('Please enter your name!', 'error');
     document.getElementById('fbName').focus();
     return;
   }
 
-  // Button disable karo — double submit rokne ke liye
   const btn = document.getElementById('fbSubmitBtn');
   btn.disabled = true;
   btn.textContent = 'Submitting...';
 
-  // Data object banao jo Flask route pe jaayega
   const payload = {
     name:            name,
     prediction_type: fbPredType  || 'Not specified',
@@ -727,27 +725,25 @@ async function submitFeedback() {
     get_reports:     wantRep ? 'Yes' : 'No'
   };
 
+  // Google Apps Script URL — seedha browser se POST karo, Flask bypass
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwavNMreUplQA7NAZj5_SAJd4Sigkk633zyPYk9PFf4B4v6k2JPVI9XFHyeLjyew2w3yQ/exec';
+
   try {
-    // Flask ke /feedback route pe POST karo
-    const res = await fetch('/feedback', {
+    // no-cors mode use karo — Google Script CORS headers nahi bhejta
+    // response read nahi hogi but data sheet mein save ho jaayega
+    await fetch(SCRIPT_URL, {
       method:  'POST',
+      mode:    'no-cors',
       headers: {'Content-Type': 'application/json'},
       body:    JSON.stringify(payload)
     });
-    const data = await res.json();
 
-    if (data.success) {
-      // Form chhupao, success screen dikhao
-      document.getElementById('fbForm').style.display    = 'none';
-      document.getElementById('fbSuccess').style.display = 'block';
-    } else {
-      showToast('Something went wrong. Try again!', 'error');
-      btn.disabled = false;
-      btn.textContent = 'Submit Feedback ✨';
-    }
+    // no-cors mein response hamesha opaque hoti hai — success maano
+    document.getElementById('fbForm').style.display    = 'none';
+    document.getElementById('fbSuccess').style.display = 'block';
+
   } catch (err) {
-    // Network error
-    showToast('Network error. Please try again!', 'error');
+    showToast('Something went wrong. Try again!', 'error');
     btn.disabled = false;
     btn.textContent = 'Submit Feedback ✨';
   }
