@@ -23,13 +23,16 @@ warnings.filterwarnings('ignore')
 app = Flask(__name__)
 app.secret_key = 'healthyai_secret_2026_secure'
 
-BASE = os.path.dirname(__file__)
-MODELS_DIR = os.path.join(BASE, 'models')
+BASE        = os.path.dirname(__file__)
+MODELS_DIR  = os.path.join(BASE, 'models')
 REPORTS_DIR = os.path.join(BASE, 'static', 'reports')
-DB_PATH = os.path.join(BASE, 'healthyai.db')
+DB_PATH     = os.path.join(BASE, 'healthyai.db')
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
-# ─── Load or train models ──────────────────────────────────
+# Google Apps Script URL — feedback Google Sheets mein jaata hai
+GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwavNMreUplQA7NAZj5_SAJd4Sigkk633zyPYk9PFf4B4v6k2JPVI9XFHyeLjyew2w3yQ/exec'
+
+# Load or train models
 def load_or_train_models():
     heart_pkl = os.path.join(MODELS_DIR, 'heart_model.pkl')
     diab_pkl  = os.path.join(MODELS_DIR, 'diabetes_model.pkl')
@@ -40,12 +43,12 @@ def load_or_train_models():
             joblib.load(diab_pkl)
         except Exception:
             need_train = True
-            print("⚠️  Existing models are incompatible — retraining now...")
+            print("Models incompatible — retraining now...")
     if need_train:
         import train_models
         train_models.train_heart()
         train_models.train_diabetes()
-        print("✅ Models trained successfully.")
+        print("Models trained successfully.")
 
 load_or_train_models()
 
@@ -61,7 +64,6 @@ diabetes_le_smoke  = joblib.load(os.path.join(MODELS_DIR, 'diabetes_le_smoke.pkl
 with open(os.path.join(MODELS_DIR, 'diabetes_meta.json')) as f:
     diabetes_meta = json.load(f)
 
-# ─── Database ──────────────────────────────────────────────
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -98,7 +100,6 @@ init_db()
 def hash_pw(pw): return hashlib.sha256(pw.encode()).hexdigest()
 def logged_in(): return 'user_id' in session
 
-# ─── Chart helpers ─────────────────────────────────────────
 def fig_to_b64(fig):
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight', transparent=True, dpi=110)
@@ -163,7 +164,6 @@ def chart_correlation(meta, title):
     ax.set_ylabel('Correlation', color='white')
     return fig_to_b64(fig)
 
-# ─── EDA Charts ────────────────────────────────────────────
 def get_eda_charts(model_type):
     import pandas as pd
     if model_type == 'heart':
@@ -208,7 +208,6 @@ def get_eda_charts(model_type):
         bmi_chart = fig_to_b64(fig)
         return {'fi': fi_chart, 'dist': dist_chart, 'corr': corr_chart, 'age': bmi_chart}
 
-# ─── Prediction gauge chart ────────────────────────────────
 def gauge_chart(probability, risk_level):
     fig, ax = plt.subplots(figsize=(5, 3), subplot_kw={'projection': 'polar'})
     fig.patch.set_alpha(0)
@@ -232,19 +231,14 @@ def gauge_chart(probability, risk_level):
             fontsize=10, transform=ax.transData)
     return fig_to_b64(fig)
 
-# ─── PDF Report ────────────────────────────────────────────
 def generate_pdf_report(report_type, patient_info, input_data, prediction, probability, risk_level, report_id):
     filename = f"report_{report_type}_{report_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
     filepath = os.path.join(REPORTS_DIR, filename)
-
     doc = SimpleDocTemplate(filepath, pagesize=A4,
                             rightMargin=2*cm, leftMargin=2*cm,
                             topMargin=2*cm, bottomMargin=2*cm)
-
     styles = getSampleStyleSheet()
     story  = []
-
-    # ── Styles ────────────────────────────────────────────
     title_style = ParagraphStyle('Title', parent=styles['Title'],
                                  fontSize=24, textColor=colors.HexColor('#7c3aed'),
                                  spaceAfter=6, alignment=TA_CENTER)
@@ -260,25 +254,17 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
                                       fontSize=8, textColor=colors.HexColor('#888'),
                                       alignment=TA_CENTER, leading=12)
     risk_color = {'Low Risk': '#06d6a0', 'Moderate Risk': '#f59e0b', 'High Risk': '#ef4444'}.get(risk_level, '#555')
-
-    # ── Logo ──────────────────────────────────────────────
     logo_path = os.path.join(BASE, 'static', 'img', 'logo.png')
     if os.path.exists(logo_path):
         logo = Image(logo_path, width=60, height=60)
         logo.hAlign = 'CENTER'
         story.append(logo)
-
-    # ── Header ────────────────────────────────────────────
     story.append(Paragraph("Healthy AI", title_style))
     story.append(Paragraph("Advanced Health Prediction Report", subtitle_style))
     story.append(HRFlowable(width='100%', thickness=2, color=colors.HexColor('#7c3aed'), spaceAfter=12))
-
-    # ── Report type ───────────────────────────────────────
     story.append(Paragraph(
         f"Report Type: {'Heart Disease Prediction' if report_type == 'heart' else 'Diabetes Prediction'}",
         section_style))
-
-    # ── Meta table ────────────────────────────────────────
     meta_data = [
         ['Report ID', f'HAI-{report_id:06d}', 'Date', datetime.now().strftime('%B %d, %Y')],
         ['Patient Name', patient_info.get('name', 'N/A'), 'Age', str(patient_info.get('age', 'N/A'))],
@@ -299,8 +285,6 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     ]))
     story.append(meta_table)
     story.append(Spacer(1, 12))
-
-    # ── Prediction result ─────────────────────────────────
     story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#eee'), spaceAfter=8))
     story.append(Paragraph("Prediction Result", section_style))
     result_data = [
@@ -324,8 +308,6 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     ]))
     story.append(result_table)
     story.append(Spacer(1, 12))
-
-    # ── Input parameters ──────────────────────────────────
     story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#eee'), spaceAfter=8))
     story.append(Paragraph("Input Parameters", section_style))
     param_rows = [['Parameter', 'Value']]
@@ -345,8 +327,6 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     ]))
     story.append(param_table)
     story.append(Spacer(1, 12))
-
-    # ── Recommendations ───────────────────────────────────
     story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#eee'), spaceAfter=8))
     story.append(Paragraph("Medical Recommendations", section_style))
     if report_type == 'heart':
@@ -390,21 +370,16 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     for i, rec in enumerate(recs, 1):
         story.append(Paragraph(f"  {i}. {rec}", normal_style))
     story.append(Spacer(1, 16))
-
-    # ── Disclaimer ────────────────────────────────────────
     story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#eee'), spaceAfter=8))
     story.append(Paragraph(
-        "⚠️ DISCLAIMER: This report is generated by an AI system and is for informational purposes only. "
+        "DISCLAIMER: This report is generated by an AI system and is for informational purposes only. "
         "It does not constitute medical advice. Please consult a qualified healthcare professional "
         "for proper diagnosis and treatment.",
         disclaimer_style))
     story.append(Spacer(1, 8))
-    story.append(Paragraph("Generated by Healthy AI | © 2026 Healthy AI", disclaimer_style))
-
+    story.append(Paragraph("Generated by Healthy AI | 2026 Healthy AI", disclaimer_style))
     doc.build(story)
     return filename
-
-# ─── Routes ────────────────────────────────────────────────
 
 @app.route('/')
 def index():
@@ -423,7 +398,7 @@ def login():
             user = db.execute('SELECT * FROM users WHERE email=? AND password=?',
                               (email, hash_pw(password))).fetchone()
         if user:
-            session['user_id'] = user['id']
+            session['user_id']   = user['id']
             session['user_name'] = user['name']
             return jsonify({'success': True, 'name': user['name']})
         return jsonify({'success': False, 'msg': 'Invalid credentials'})
@@ -440,7 +415,7 @@ def register():
                            (name, email, hash_pw(password)))
                 db.commit()
                 user = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
-            session['user_id'] = user['id']
+            session['user_id']   = user['id']
             session['user_name'] = user['name']
             return jsonify({'success': True, 'name': name})
         except sqlite3.IntegrityError:
@@ -499,18 +474,18 @@ def predict_heart():
             db.commit()
             report_id = cursor.lastrowid
         display_data = {
-            'Gender':           patient['gender'],
-            'Age':              d['age'],
-            'Smoker':           'Yes' if d['currentSmoker'] == '1' else 'No',
-            'Cigs/Day':         d['cigsPerDay'],
-            'BP Meds':          'Yes' if d['BPMeds'] == '1' else 'No',
+            'Gender':            patient['gender'],
+            'Age':               d['age'],
+            'Smoker':            'Yes' if d['currentSmoker'] == '1' else 'No',
+            'Cigs/Day':          d['cigsPerDay'],
+            'BP Meds':           'Yes' if d['BPMeds'] == '1' else 'No',
             'Total Cholesterol': d['totChol'],
-            'Systolic BP':      d['sysBP'],
-            'Diastolic BP':     d['diaBP'],
-            'BMI':              d['BMI'],
-            'Heart Rate':       d['heartRate'],
-            'Glucose':          d['glucose'],
-            'Hypertension':     'Yes' if d['prevalentHyp'] == '1' else 'No',
+            'Systolic BP':       d['sysBP'],
+            'Diastolic BP':      d['diaBP'],
+            'BMI':               d['BMI'],
+            'Heart Rate':        d['heartRate'],
+            'Glucose':           d['glucose'],
+            'Hypertension':      'Yes' if d['prevalentHyp'] == '1' else 'No',
         }
         pdf_file = generate_pdf_report('heart', patient, display_data, prediction_text, prob, risk, report_id)
         with get_db() as db:
@@ -565,14 +540,14 @@ def predict_diabetes():
             db.commit()
             report_id = cursor.lastrowid
         display_data = {
-            'Gender':               gender_str,
-            'Age':                  d['age'],
-            'Hypertension':         'Yes' if d['hypertension'] == '1' else 'No',
+            'Gender':                gender_str,
+            'Age':                   d['age'],
+            'Hypertension':          'Yes' if d['hypertension'] == '1' else 'No',
             'Heart Disease History': 'Yes' if d['heart_disease'] == '1' else 'No',
-            'Smoking History':      smoking_str,
-            'BMI':                  d['bmi'],
-            'HbA1c Level':          d['HbA1c_level'],
-            'Blood Glucose Level':  d['blood_glucose_level'],
+            'Smoking History':       smoking_str,
+            'BMI':                   d['bmi'],
+            'HbA1c Level':           d['HbA1c_level'],
+            'Blood Glucose Level':   d['blood_glucose_level'],
         }
         pdf_file = generate_pdf_report('diabetes', patient, display_data, prediction_text, prob, risk, report_id)
         with get_db() as db:
@@ -617,10 +592,10 @@ def download_report(filename):
 def api_stats():
     if not logged_in(): return jsonify({'error': 'unauthorized'})
     with get_db() as db:
-        total         = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=?", (session['user_id'],)).fetchone()['c']
-        heart_count   = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='heart'", (session['user_id'],)).fetchone()['c']
-        diabetes_count= db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='diabetes'", (session['user_id'],)).fetchone()['c']
-        high_risk     = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND risk_level='High Risk'", (session['user_id'],)).fetchone()['c']
+        total          = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=?", (session['user_id'],)).fetchone()['c']
+        heart_count    = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='heart'", (session['user_id'],)).fetchone()['c']
+        diabetes_count = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='diabetes'", (session['user_id'],)).fetchone()['c']
+        high_risk      = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND risk_level='High Risk'", (session['user_id'],)).fetchone()['c']
     return jsonify({'total': total, 'heart': heart_count, 'diabetes': diabetes_count, 'high_risk': high_risk})
 
 @app.route('/terms')
@@ -638,6 +613,73 @@ def privacy():
         with get_db() as db:
             user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
     return render_template('privacy.html', user=user)
+
+# Feedback route — user ka data Google Sheets mein save karta hai
+@app.route('/feedback', methods=['POST'])
+def feedback():
+    data = request.get_json()
+    import requests as req_lib
+    payload = {
+        'name':            data.get('name', ''),
+        'prediction_type': data.get('prediction_type', ''),
+        'rating':          data.get('rating', ''),
+        'helpful':         data.get('helpful', ''),
+        'message':         data.get('message', ''),
+        'get_reports':     data.get('get_reports', '')
+    }
+    try:
+        req_lib.post(GOOGLE_SHEET_URL, json=payload, timeout=10)
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f'Feedback error: {e}')
+        return jsonify({'success': False, 'error': str(e)})
+
+# Admin Panel
+@app.route('/admin/Kansal0920Admin')
+def admin_view():
+    with get_db() as db:
+        users   = db.execute('SELECT id, name, email, created_at FROM users').fetchall()
+        reports = db.execute('''
+            SELECT r.id, u.name as username, u.email, r.report_type,
+                   r.patient_name, r.risk_level, r.probability, r.created_at
+            FROM reports r
+            JOIN users u ON r.user_id = u.id
+            ORDER BY r.created_at DESC
+        ''').fetchall()
+    html = f'''<html><head><title>Healthy AI Admin</title>
+    <style>
+        body{{background:#0a0a1a;color:white;font-family:monospace;padding:30px}}
+        h1{{color:#00d4ff;margin-bottom:5px}} h2{{color:#7c3aed;margin-top:40px}}
+        .stats{{display:flex;gap:20px;margin:20px 0}}
+        .stat{{background:#ffffff10;padding:15px 25px;border-radius:10px;text-align:center}}
+        .stat h3{{color:#00d4ff;font-size:28px;margin:0}} .stat p{{margin:5px 0;color:#aaa}}
+        table{{border-collapse:collapse;width:100%;margin-top:15px}}
+        th{{background:#7c3aed;padding:10px 12px;text-align:left;font-size:13px}}
+        td{{padding:8px 12px;border-bottom:1px solid #ffffff15;font-size:12px}}
+        tr:hover{{background:#ffffff08}}
+        .low{{color:#06d6a0}} .mod{{color:#ffd166}} .high{{color:#ff6b6b}}
+    </style></head><body>
+    <h1>Healthy AI Admin Panel</h1>
+    <p style="color:#aaa">Secret admin view.</p>
+    <div class="stats">
+        <div class="stat"><h3>{len(users)}</h3><p>Total Users</p></div>
+        <div class="stat"><h3>{len(reports)}</h3><p>Total Reports</p></div>
+        <div class="stat"><h3>{sum(1 for r in reports if r["report_type"]=="heart")}</h3><p>Heart Reports</p></div>
+        <div class="stat"><h3>{sum(1 for r in reports if r["report_type"]=="diabetes")}</h3><p>Diabetes Reports</p></div>
+        <div class="stat"><h3>{sum(1 for r in reports if r["risk_level"]=="High Risk")}</h3><p>High Risk Cases</p></div>
+    </div>'''
+    html += f'<h2>Users ({len(users)} total)</h2><table>'
+    html += '<tr><th>#</th><th>Name</th><th>Email</th><th>Joined</th></tr>'
+    for u in users:
+        html += f'<tr><td>{u["id"]}</td><td>{u["name"]}</td><td>{u["email"]}</td><td>{u["created_at"]}</td></tr>'
+    html += '</table>'
+    html += f'<h2>Reports ({len(reports)} total)</h2><table>'
+    html += '<tr><th>#</th><th>User</th><th>Email</th><th>Type</th><th>Patient</th><th>Risk</th><th>Probability</th><th>Date</th></tr>'
+    for r in reports:
+        risk_class = 'low' if r["risk_level"]=='Low Risk' else ('high' if r["risk_level"]=='High Risk' else 'mod')
+        html += f'<tr><td>{r["id"]}</td><td>{r["username"]}</td><td>{r["email"]}</td><td>{r["report_type"].upper()}</td><td>{r["patient_name"]}</td><td class="{risk_class}">{r["risk_level"]}</td><td>{round(r["probability"]*100,1)}%</td><td>{r["created_at"]}</td></tr>'
+    html += '</table></body></html>'
+    return html
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
