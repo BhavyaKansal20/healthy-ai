@@ -193,10 +193,158 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 3px; }
-  @media (max-width: 768px) {
-    nav.navbar { padding: 12px 20px; }
-    .nav-links a:not(.btn-nav):not(.active) { display: none; }
+  /* ══════════════════════════════════════
+   MOBILE RESPONSIVE — SITE WIDE
+   ══════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── Navbar ── */
+  nav.navbar {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
+  .nav-brand span { font-size: 1.1rem; }
+  .nav-brand img  { height: 28px; }
+
+  /* Hide all nav links except logout/signin button */
+  .nav-links a:not(.btn-nav) { display: none; }
+  .nav-links .btn-nav {
+    padding: 7px 16px;
+    font-size: 0.85rem;
+  }
+
+  /* ── Main content spacing ── */
+  main { padding-top: 70px; }
+
+  /* ── All containers full width ── */
+  .container, .wrap,
+  [class*="container"],
+  [class*="content"],
+  [class*="wrapper"],
+  [class*="inner"] {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* ── All grids → single column ── */
+  [class*="grid"],
+  [class*="cards"],
+  [class*="stats"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* ── All flex rows → column ── */
+  [class*="row"]:not(.star-row):not(.helpful-row):not(.fb-radio-group) {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  /* ── Typography ── */
+  h1 { font-size: clamp(1.6rem, 5vw, 2.2rem) !important; line-height: 1.2 !important; }
+  h2 { font-size: clamp(1.3rem, 4vw, 1.7rem) !important; }
+  h3 { font-size: clamp(1rem,   3vw, 1.3rem) !important; }
+  p  { font-size: 0.9rem !important; line-height: 1.6 !important; }
+
+  /* ── Inputs — 16px stops iOS zoom ── */
+  input, select, textarea, .form-input, .fb-input {
+    font-size: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* ── Buttons full width on mobile ── */
+  .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 48px !important;
+    font-size: 0.9rem !important;
+  }
+
+  /* ── Cards ── */
+  .glass, .stat-card, .card,
+  [class*="card"] {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  /* ── Modals (login/register) ── */
+  #loginModal > div,
+  #registerModal > div {
+    width: 94vw !important;
+    padding: 28px 20px !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* ── Feedback modal ── */
+  #feedbackModal {
+    width: 94vw !important;
+    padding: 24px 18px !important;
+  }
+  .fb-radio-group {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .star-row span { font-size: 1.6rem !important; }
+
+  /* ── Feedback button position ── */
+  #feedbackBtn {
+    bottom: 16px !important;
+    right: 16px !important;
+    width: 50px !important;
+    height: 50px !important;
+    font-size: 1.2rem !important;
+  }
+
+  /* ── Tables scrollable ── */
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    white-space: nowrap !important;
+  }
+
+  /* ── Images ── */
+  img, canvas, svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* ── Stat cards ── */
+  .stat-number { font-size: 1.8rem !important; }
+  .stat-label  { font-size: 0.8rem !important; }
+
+  /* ── Toast notification ── */
+  #toast {
+    bottom: 16px !important;
+    right: 16px !important;
+    left: 16px !important;
+    max-width: 100% !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* ── Orbs smaller on mobile (performance) ── */
+  .orb-1 { width: 250px !important; height: 250px !important; }
+  .orb-2 { width: 200px !important; height: 200px !important; }
+  .orb-3 { width: 150px !important; height: 150px !important; }
+}
+
+/* ── Very small phones (iPhone SE etc) ── */
+@media (max-width: 380px) {
+  nav.navbar { padding: 8px 12px; }
+  .nav-brand span { font-size: 1rem; }
+  h1 { font-size: 1.4rem !important; }
+  .glass, [class*="card"] { padding: 14px !important; }
+  #feedbackBtn { width: 44px !important; height: 44px !important; font-size: 1rem !important; }
+}
 
   /* ── FEEDBACK BUTTON ── */
   #feedbackBtn {
