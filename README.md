@@ -18,7 +18,6 @@
 
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-Visit%20Now-06d6a0?style=for-the-badge&labelColor=0d1117)](https://healthyai-dlog.onrender.com)
 [![GitHub Repo](https://img.shields.io/badge/⭐%20GitHub-Star%20Repo-7c3aed?style=for-the-badge&labelColor=0d1117)](https://github.com/BhavyaKansal20/healthy-ai)
-[![Made by MultiModex AI](https://img.shields.io/badge/🤖%20MultiModex%20AI-2026-ff6b6b?style=for-the-badge&labelColor=0d1117)](https://multimodexai.vercel.app)
 
 <br>
 
