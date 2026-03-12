@@ -12,13 +12,13 @@
 ```
 
 ### ✦ Advanced ML-powered Health Prediction Platform ✦
-#### Predict Heart Disease & Diabetes Risk in Seconds — Powered by Machine Learning
+#### Predict Your Health Before It's Too Late — Powered by Machine Learning
 
 <br>
 
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-Visit%20Now-06d6a0?style=for-the-badge&labelColor=0d1117)](https://healthyai-dlog.onrender.com)
 [![GitHub Repo](https://img.shields.io/badge/⭐%20GitHub-Star%20Repo-7c3aed?style=for-the-badge&labelColor=0d1117)](https://github.com/BhavyaKansal20/healthy-ai)
-[![Made by Automyx AI](https://img.shields.io/badge/🤖%20Automyx%20AI-2026-ff6b6b?style=for-the-badge&labelColor=0d1117)](https://github.com/BhavyaKansal20)
+[![Made by MultiModex AI](https://img.shields.io/badge/🤖%20MultiModex%20AI-2026-ff6b6b?style=for-the-badge&labelColor=0d1117)](https://multimodexai.vercel.app)
 
 <br>
 
@@ -32,7 +32,7 @@
 
 <br>
 
-> **"Your health data, analyzed in seconds. No waiting rooms. No paperwork."**
+> **"Predict Your Health Before It's Too Late. No waiting rooms. No paperwork."**
 
 </div>
 
@@ -449,17 +449,24 @@ python app.py
 <div align="center">
 
 ```
-╔══════════════════════════════════════════════╗
-║                                              ║
-║   👤  Bhavya Kansal                          ║
-║   🏢  Founder — Automyx AI                   ║
-║   🌐  github.com/BhavyaKansal20             ║
-║   📅  2026                                   ║
-║                                              ║
-╚══════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║   👤  Bhavya Kansal                                          ║
+║   🎓  AI Engineer | DeepTech Developer                       ║
+║   🏢  Founder — MultiModex AI                                ║
+║   🎓  B.Tech AI & ML — Thapar Institute of Engg. & Tech      ║
+║   🔬  AI/ML Intern Trainee — IIT Ropar × NIELIT              ║
+║   🌐  bhavyakansal.dev                                       ║
+║   📧  kansalbhavya27@gmail.com                               ║
+║                                                              ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
 ```
 
+[![Portfolio](https://img.shields.io/badge/🌐%20Portfolio-bhavyakansal.dev-06d6a0?style=for-the-badge&labelColor=0d1117)](https://bhavyakansal.dev)
 [![GitHub](https://img.shields.io/badge/GitHub-BhavyaKansal20-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/BhavyaKansal20)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-kansal0920-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/kansal0920)
+[![MultiModex AI](https://img.shields.io/badge/🤖%20MultiModex%20AI-Platform-7c3aed?style=for-the-badge&labelColor=0d1117)](https://multimodexai.vercel.app)
 
 </div>
 
@@ -487,11 +494,11 @@ Every star helps this project reach more developers. 🙏
 <br>
 
 ```
-  ╔══════════════════════════════════════════╗
-  ║     🩺  H E A L T H Y   A I             ║
-  ║     Automyx AI  •  2026                  ║
-  ║     Built with ❤️  for healthier lives   ║
-  ╚══════════════════════════════════════════╝
+  ╔══════════════════════════════════════════════════════╗
+  ║     🩺  H E A L T H Y   A I                         ║
+  ║     MultiModex AI  •  © 2026 Bhavya Kansal           ║
+  ║     Built with ❤️  for healthier lives               ║
+  ╚══════════════════════════════════════════════════════╝
 ```
 
 [![Live Demo](https://img.shields.io/badge/🚀%20Try%20It%20Live-healthyai--dlog.onrender.com-06d6a0?style=for-the-badge)](https://healthyai-dlog.onrender.com)
