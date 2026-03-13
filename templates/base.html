@@ -110,7 +110,7 @@
   }
   main { padding-top: 80px; min-height: 100vh; }
   .btn {
-    display: inline-flex; align-items: center; gap: 8px;
+    display: inline-flex; align-items: center; gap: 8px; justify-content: center;
     padding: 12px 28px; border-radius: 50px; font-size: 0.95rem;
     font-weight: 600; font-family: var(--font); cursor: pointer;
     border: none; transition: all 0.3s; text-decoration: none;
@@ -135,6 +135,7 @@
   }
   .btn-glass:hover { background: var(--glass-hover); transform: translateY(-1px); }
   .btn-sm { padding: 8px 18px; font-size: 0.85rem; }
+  
   .form-group { margin-bottom: 20px; }
   .form-group label {
     display: block; font-size: 0.85rem; font-weight: 600;
@@ -151,6 +152,7 @@
     box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
   }
   .form-input option { background: #1a1a2e; }
+  
   .section-tag {
     display: inline-flex; align-items: center; gap: 8px;
     background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3);
@@ -164,6 +166,7 @@
   .badge-low { background: rgba(6,214,160,0.15); color: var(--green); border: 1px solid rgba(6,214,160,0.3); }
   .badge-moderate { background: rgba(255,209,102,0.15); color: var(--yellow); border: 1px solid rgba(255,209,102,0.3); }
   .badge-high { background: rgba(255,107,107,0.15); color: var(--red); border: 1px solid rgba(255,107,107,0.3); }
+  
   .stat-card {
     padding: 24px; border-radius: var(--radius);
     background: var(--glass); border: 1px solid var(--glass-border);
@@ -173,6 +176,7 @@
   .stat-card:hover { transform: translateY(-4px); }
   .stat-number { font-size: 2.5rem; font-weight: 800; line-height: 1; }
   .stat-label { font-size: 0.85rem; color: var(--muted); margin-top: 6px; font-weight: 500; }
+  
   #toast {
     position: fixed; bottom: 30px; right: 30px; z-index: 9999;
     background: var(--glass); backdrop-filter: blur(20px);
@@ -184,21 +188,21 @@
   #toast.show { transform: translateY(0); opacity: 1; }
   #toast.success { border-color: rgba(6,214,160,0.4); }
   #toast.error { border-color: rgba(255,107,107,0.4); }
+  
   .spinner {
     width: 22px; height: 22px; border: 3px solid rgba(255,255,255,0.1);
     border-top-color: var(--cyan); border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 3px; }
 
   /* ══════════════════════════════════════
-     FEEDBACK BUTTON & MODAL — desktop styles
-     (yeh media query ke BAHAR hain — sahi jagah)
+     FEEDBACK BUTTON & MODAL
      ══════════════════════════════════════ */
-
   #feedbackBtn {
     position: fixed;
     bottom: 28px;
@@ -348,166 +352,83 @@
   #fbSubmitBtn:hover { opacity: 0.9; transform: translateY(-1px); }
   #fbSubmitBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-  #fbSuccess {
-    display: none; text-align: center; padding: 20px 0;
-  }
+  #fbSuccess { display: none; text-align: center; padding: 20px 0; }
 
   /* ══════════════════════════════════════
-     MOBILE RESPONSIVE — SITE WIDE
+     CLEAN & PROPORTIONAL MOBILE RESPONSIVE
      max-width: 768px
      ══════════════════════════════════════ */
   @media (max-width: 768px) {
-
     /* ── Navbar ── */
-    nav.navbar {
-      padding: 10px 16px;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .nav-brand span { font-size: 1.1rem; }
-    .nav-brand img  { height: 28px; }
+    nav.navbar { padding: 12px 20px; }
+    .nav-brand span { font-size: 1.2rem; }
+    .nav-brand img  { height: 30px; }
     .nav-links a:not(.btn-nav) { display: none; }
-    .nav-links .btn-nav {
-      padding: 7px 16px;
-      font-size: 0.85rem;
-    }
+    .nav-links .btn-nav { padding: 8px 16px; font-size: 0.85rem; }
 
-    /* ── Main ── */
+    /* ── Main Adjustments ── */
     main { padding-top: 70px; }
+    
+    /* Global Max Widths to prevent overflowing */
+    img, svg, canvas { max-width: 100%; height: auto; }
 
-    /* ── Containers full width ── */
-    .container, .wrap,
-    [class*="container"],
-    [class*="content"],
-    [class*="wrapper"],
-    [class*="inner"] {
-      padding-left: 16px !important;
-      padding-right: 16px !important;
-      width: 100% !important;
-      max-width: 100% !important;
-    }
+    /* ── Smooth Typography Scaling ── */
+    h1 { font-size: 2rem !important; line-height: 1.25 !important; }
+    h2 { font-size: 1.6rem !important; }
+    h3 { font-size: 1.3rem !important; }
+    p  { font-size: 0.95rem !important; line-height: 1.6 !important; }
 
-    /* ── Grids → single column ── */
-    [class*="grid"],
-    [class*="cards"],
-    [class*="stats"] {
-      grid-template-columns: 1fr !important;
-      gap: 12px !important;
-    }
-
-    /* ── Flex rows → column (except feedback UI rows) ── */
-    [class*="row"]:not(.star-row):not(.helpful-row):not(.fb-radio-group) {
-      flex-direction: column !important;
-      gap: 12px !important;
-    }
-
-    /* ── Typography ── */
-    h1 { font-size: clamp(1.6rem, 5vw, 2.2rem) !important; line-height: 1.2 !important; }
-    h2 { font-size: clamp(1.3rem, 4vw, 1.7rem) !important; }
-    h3 { font-size: clamp(1rem,   3vw, 1.3rem) !important; }
-    p  { font-size: 0.9rem !important; line-height: 1.6 !important; }
-
-    /* ── Inputs — 16px stops iOS zoom on focus ── */
+    /* ── Clean Buttons (No forced 100% widths unless necessary) ── */
+    .btn { padding: 10px 22px !important; font-size: 0.9rem !important; }
+    
+    /* ── Fix Inputs for iOS Zoom ── */
     input, select, textarea, .form-input, .fb-input {
       font-size: 16px !important;
-      width: 100% !important;
       box-sizing: border-box !important;
     }
 
-    /* ── Buttons ── */
-    .btn {
-      width: 100% !important;
-      justify-content: center !important;
-      min-height: 48px !important;
-      font-size: 0.9rem !important;
-    }
-
-    /* ── Cards ── */
-    .glass, .stat-card, .card,
-    [class*="card"] {
-      width: 100% !important;
-      margin-left: 0 !important;
-      margin-right: 0 !important;
-      padding: 16px !important;
-      border-radius: 16px !important;
-    }
-
-    /* ── Login/Register modals ── */
-    #loginModal > div,
-    #registerModal > div {
-      width: 94vw !important;
-      padding: 28px 20px !important;
-      max-height: 90vh !important;
-      overflow-y: auto !important;
-    }
-
-    /* ── Feedback modal ── */
-    #feedbackModal {
-      width: 94vw !important;
-      padding: 24px 18px !important;
-    }
-    .fb-radio-group {
-      flex-direction: column !important;
-      gap: 8px !important;
-    }
-    .star-row span { font-size: 1.6rem !important; }
-
-    /* ── Feedback button ── */
-    #feedbackBtn {
-      bottom: 16px !important;
-      right: 16px !important;
-      width: 50px !important;
-      height: 50px !important;
-      font-size: 1.2rem !important;
-    }
-
-    /* ── Tables scrollable ── */
-    table {
-      display: block !important;
-      overflow-x: auto !important;
-      -webkit-overflow-scrolling: touch !important;
-      white-space: nowrap !important;
-    }
-
-    /* ── Images & charts ── */
-    img, canvas, svg {
-      max-width: 100% !important;
-      height: auto !important;
-    }
-
-    /* ── Stat cards ── */
-    .stat-number { font-size: 1.8rem !important; }
+    /* ── Stat Cards & Containers ── */
+    .stat-number { font-size: 2rem !important; }
     .stat-label  { font-size: 0.8rem !important; }
+    
+    /* Ensure containers have breathing room */
+    .glass { padding: 20px !important; }
+
+    /* ── Modals ── */
+    #loginModal > div, #registerModal > div, #feedbackModal {
+      width: 92vw !important;
+      padding: 24px !important;
+      border-radius: 20px !important;
+    }
+    
+    /* ── Feedback Form Adjustments ── */
+    .fb-radio-group { flex-direction: column !important; gap: 8px !important; }
+    .star-row span { font-size: 1.6rem !important; }
+    #feedbackBtn {
+      bottom: 20px !important; right: 20px !important;
+      width: 50px !important; height: 50px !important; font-size: 1.2rem !important;
+    }
 
     /* ── Toast ── */
     #toast {
-      bottom: 16px !important;
-      right: 16px !important;
-      left: 16px !important;
-      max-width: 100% !important;
-      font-size: 0.85rem !important;
+      bottom: 20px !important; right: 20px !important; left: 20px !important;
+      max-width: 100% !important; font-size: 0.85rem !important;
     }
 
-    /* ── Orbs smaller for performance ── */
-    .orb-1 { width: 250px !important; height: 250px !important; }
-    .orb-2 { width: 200px !important; height: 200px !important; }
+    /* ── Optimize Orbs for Performance ── */
+    .orb-1 { width: 300px !important; height: 300px !important; }
+    .orb-2 { width: 250px !important; height: 250px !important; }
     .orb-3 { width: 150px !important; height: 150px !important; }
   }
 
   /* ══════════════════════════════════════
-     VERY SMALL PHONES — iPhone SE etc
-     max-width: 380px
+     VERY SMALL PHONES (max-width: 380px)
      ══════════════════════════════════════ */
   @media (max-width: 380px) {
-    nav.navbar { padding: 8px 12px; }
-    .nav-brand span { font-size: 1rem; }
-    h1 { font-size: 1.4rem !important; }
-    .glass, [class*="card"] { padding: 14px !important; }
-    #feedbackBtn {
-      width: 44px !important;
-      height: 44px !important;
-      font-size: 1rem !important;
-    }
+    nav.navbar { padding: 10px 16px; }
+    .nav-brand span { font-size: 1.1rem; }
+    h1 { font-size: 1.7rem !important; }
+    .glass, [class*="card"] { padding: 16px !important; }
   }
 
 </style>
@@ -598,7 +519,7 @@
 
       <div style="margin-bottom:16px;">
         <label class="fb-label">Your Name</label>
-        <input id="fbName" class="fb-input" type="text" placeholder="Bhavya Kansal">
+        <input id="fbName" class="fb-input" type="text" placeholder="Mr. Kansal">
       </div>
 
       <div style="margin-bottom:16px;">
