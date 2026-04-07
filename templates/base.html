@@ -449,6 +449,7 @@
       <a href="/dashboard" {% if request.path == '/dashboard' %}class="active"{% endif %}><i class="fas fa-chart-line"></i> Dashboard</a>
       <a href="/predict/heart" {% if '/heart' in request.path %}class="active"{% endif %}><i class="fas fa-heartbeat"></i> Heart</a>
       <a href="/predict/diabetes" {% if '/diabetes' in request.path %}class="active"{% endif %}><i class="fas fa-syringe"></i> Diabetes</a>
+      <a href="/predict/brain" {% if '/brain' in request.path %}class="active"{% endif %}><i class="fas fa-brain"></i> Brain</a>
       <a href="/reports" {% if request.path == '/reports' %}class="active"{% endif %}><i class="fas fa-file-medical"></i> Reports</a>
       <a href="/logout" class="btn-nav btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
     {% else %}
@@ -533,9 +534,13 @@
             <input type="radio" name="fbPredType">
             <span>🩸 Diabetes</span>
           </label>
-          <label id="rbBoth" onclick="selectPrediction('Both')">
+          <label id="rbBrain" onclick="selectPrediction('Brain Tumor')">
             <input type="radio" name="fbPredType">
-            <span>⚡ Both</span>
+            <span>🧠 Brain Tumor</span>
+          </label>
+          <label id="rbBoth" onclick="selectPrediction('All Features')">
+            <input type="radio" name="fbPredType">
+            <span>⚡ All Features</span>
           </label>
         </div>
       </div>
@@ -697,7 +702,7 @@ function selectPrediction(type) {
     l.style.color       = 'var(--muted)';
   });
   const labels = document.querySelectorAll('.fb-radio-group label');
-  const map = {'Heart Disease': 0, 'Diabetes': 1, 'Both': 2};
+  const map = {'Heart Disease': 0, 'Diabetes': 1, 'Brain Tumor': 2, 'All Features': 3};
   const idx = map[type];
   if (labels[idx]) {
     labels[idx].style.borderColor = 'var(--purple)';

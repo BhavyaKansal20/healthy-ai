@@ -7,6 +7,7 @@ from reportlab.platypus import Image
 import sqlite3, hashlib, json, os, io, base64, re
 from datetime import datetime
 import joblib, numpy as np
+from werkzeug.utils import secure_filename
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -20,14 +21,28 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 import warnings
 warnings.filterwarnings('ignore')
 
+try:
+    import torch
+    import torch.nn as nn
+    from torchvision import models, transforms
+    from PIL import Image as PILImage
+except Exception:
+    torch = None
+    nn = None
+    models = None
+    transforms = None
+    PILImage = None
+
 app = Flask(__name__)
 app.secret_key = 'healthyai_secret_2026_secure'
 
 BASE        = os.path.dirname(__file__)
 MODELS_DIR  = os.path.join(BASE, 'models')
 REPORTS_DIR = os.path.join(BASE, 'static', 'reports')
+UPLOADS_DIR = os.path.join(BASE, 'static', 'uploads')
 DB_PATH     = os.path.join(BASE, 'healthyai.db')
 os.makedirs(REPORTS_DIR, exist_ok=True)
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 # Google Apps Script URL — feedback Google Sheets mein jaata hai
 GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwavNMreUplQA7NAZj5_SAJd4Sigkk633zyPYk9PFf4B4v6k2JPVI9XFHyeLjyew2w3yQ/exec'
@@ -36,6 +51,7 @@ GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwavNMreUplQA7NAZj5_
 def load_or_train_models():
     heart_pkl = os.path.join(MODELS_DIR, 'heart_model.pkl')
     diab_pkl  = os.path.join(MODELS_DIR, 'diabetes_model.pkl')
+    brain_pt  = os.path.join(MODELS_DIR, 'brain_tumor_model.pt')
     need_train = not os.path.exists(heart_pkl) or not os.path.exists(diab_pkl)
     if not need_train:
         try:
@@ -50,6 +66,15 @@ def load_or_train_models():
         train_models.train_diabetes()
         print("Models trained successfully.")
 
+    # Brain model training is optional at startup (dataset may not exist in production).
+    if not os.path.exists(brain_pt):
+        try:
+            import train_models
+            train_models.train_brain()
+            print("Brain model trained successfully.")
+        except Exception as e:
+            print(f"Brain model not available yet: {e}")
+
 load_or_train_models()
 
 heart_model        = joblib.load(os.path.join(MODELS_DIR, 'heart_model.pkl'))
@@ -63,6 +88,67 @@ diabetes_le_gender = joblib.load(os.path.join(MODELS_DIR, 'diabetes_le_gender.pk
 diabetes_le_smoke  = joblib.load(os.path.join(MODELS_DIR, 'diabetes_le_smoke.pkl'))
 with open(os.path.join(MODELS_DIR, 'diabetes_meta.json')) as f:
     diabetes_meta = json.load(f)
+
+
+if nn is not None and models is not None:
+    class BrainTumorNet(nn.Module):
+        def __init__(self, num_classes=4):
+            super().__init__()
+            self.backbone = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
+            in_features = self.backbone.classifier[1].in_features
+            self.backbone.classifier[1] = nn.Sequential(
+                nn.Dropout(p=0.30),
+                nn.Linear(in_features, num_classes)
+            )
+
+        def forward(self, x):
+            return self.backbone(x)
+else:
+    class BrainTumorNet:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError('PyTorch is required for brain tumor model usage.')
+
+
+brain_model = None
+brain_meta = {
+    'accuracy': 0,
+    'roc_auc': 0,
+    'n_samples': 0,
+    'classes': ['glioma', 'meningioma', 'notumor', 'pituitary']
+}
+brain_classes = ['glioma', 'meningioma', 'notumor', 'pituitary']
+brain_available = False
+brain_device = torch.device('cuda' if (torch is not None and torch.cuda.is_available()) else 'cpu') if torch is not None else None
+
+if torch is not None and nn is not None and models is not None and transforms is not None:
+    brain_pt_path = os.path.join(MODELS_DIR, 'brain_tumor_model.pt')
+    brain_meta_path = os.path.join(MODELS_DIR, 'brain_tumor_meta.json')
+    brain_labels_path = os.path.join(MODELS_DIR, 'brain_tumor_labels.pkl')
+    if os.path.exists(brain_pt_path):
+        try:
+            ckpt = torch.load(brain_pt_path, map_location=brain_device)
+            classes = ckpt.get('classes', None)
+            if classes:
+                brain_classes = classes
+            elif os.path.exists(brain_labels_path):
+                brain_classes = joblib.load(brain_labels_path)
+
+            brain_model = BrainTumorNet(num_classes=len(brain_classes)).to(brain_device)
+            brain_model.load_state_dict(ckpt['state_dict'])
+            brain_model.eval()
+            brain_available = True
+
+            if os.path.exists(brain_meta_path):
+                with open(brain_meta_path) as f:
+                    brain_meta = json.load(f)
+        except Exception as e:
+            print(f"Failed to load brain tumor model: {e}")
+
+brain_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+]) if transforms is not None else None
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -262,9 +348,12 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     story.append(Paragraph("Healthy AI", title_style))
     story.append(Paragraph("Advanced Health Prediction Report", subtitle_style))
     story.append(HRFlowable(width='100%', thickness=2, color=colors.HexColor('#7c3aed'), spaceAfter=12))
-    story.append(Paragraph(
-        f"Report Type: {'Heart Disease Prediction' if report_type == 'heart' else 'Diabetes Prediction'}",
-        section_style))
+    type_label = {
+        'heart': 'Heart Disease Prediction',
+        'diabetes': 'Diabetes Prediction',
+        'brain': 'Brain Tumor MRI Prediction'
+    }.get(report_type, 'Health Prediction')
+    story.append(Paragraph(f"Report Type: {type_label}", section_style))
     meta_data = [
         ['Report ID', f'HAI-{report_id:06d}', 'Date', datetime.now().strftime('%B %d, %Y')],
         ['Patient Name', patient_info.get('name', 'N/A'), 'Age', str(patient_info.get('age', 'N/A'))],
@@ -348,7 +437,7 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
                     "Annual cardiac screening recommended.",
                     "Maintain BMI within healthy range (18.5-24.9).",
                     "Exercise regularly and eat a balanced diet."]
-    else:
+    elif report_type == 'diabetes':
         if risk_level == 'High Risk':
             recs = ["Consult an endocrinologist immediately.",
                     "Monitor blood glucose daily.",
@@ -367,6 +456,22 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
                     "Annual diabetes screening recommended.",
                     "Keep BMI in healthy range.",
                     "Limit sugar and refined carbohydrates."]
+    else:
+        if risk_level == 'High Risk':
+            recs = ["Consult a neurologist immediately.",
+                    "Get MRI reviewed by a radiologist.",
+                    "Avoid self-medication and seek urgent clinical evaluation.",
+                    "Follow emergency care advice for severe neurological symptoms.",
+                    "Keep all imaging and reports available for specialist review."]
+        elif risk_level == 'Moderate Risk':
+            recs = ["Schedule specialist consultation within a week.",
+                    "Repeat MRI scan if clinically advised.",
+                    "Track symptoms such as headache, vision changes or seizures.",
+                    "Follow physician guidance for further tests."]
+        else:
+            recs = ["No significant tumor pattern detected by AI model.",
+                    "Continue regular preventive health checkups.",
+                    "Consult a doctor if neurological symptoms persist."]
     for i, rec in enumerate(recs, 1):
         story.append(Paragraph(f"  {i}. {rec}", normal_style))
     story.append(Spacer(1, 16))
@@ -436,7 +541,8 @@ def dashboard():
         reports = db.execute('SELECT * FROM reports WHERE user_id=? ORDER BY created_at DESC LIMIT 20',
                              (session['user_id'],)).fetchall()
     return render_template('dashboard.html', user=user, reports=reports,
-                           heart_meta=heart_meta, diabetes_meta=diabetes_meta)
+                           heart_meta=heart_meta, diabetes_meta=diabetes_meta,
+                           brain_meta=brain_meta, brain_available=brain_available)
 
 @app.route('/predict/heart', methods=['GET','POST'])
 def predict_heart():
@@ -562,9 +668,113 @@ def predict_diabetes():
         user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
     return render_template('predict_diabetes.html', user=user, meta=diabetes_meta)
 
+
+@app.route('/predict/brain', methods=['GET', 'POST'])
+def predict_brain():
+    if not logged_in():
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        if not brain_available or brain_model is None or brain_transform is None:
+            return jsonify({'success': False, 'msg': 'Brain tumor model is not trained yet. Please train and restart app.'}), 503
+
+        file = request.files.get('mri_image')
+        if file is None or file.filename == '':
+            return jsonify({'success': False, 'msg': 'Please upload an MRI image.'}), 400
+
+        filename = secure_filename(file.filename)
+        save_name = f"brain_{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+        save_path = os.path.join(UPLOADS_DIR, save_name)
+        file.save(save_path)
+
+        image = PILImage.open(save_path).convert('RGB')
+        x = brain_transform(image).unsqueeze(0).to(brain_device)
+
+        with torch.no_grad():
+            logits = brain_model(x)
+            probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
+
+        pred_idx = int(np.argmax(probs))
+        pred_class = brain_classes[pred_idx] if pred_idx < len(brain_classes) else 'unknown'
+        confidence = float(probs[pred_idx])
+        no_tumor_aliases = {'notumor', 'no_tumor', 'no-tumor', 'not tumor'}
+        tumor_prob = 1.0 - confidence if pred_class.lower().replace(' ', '') in no_tumor_aliases else confidence
+
+        if tumor_prob < 0.3:
+            risk = 'Low Risk'
+        elif tumor_prob < 0.6:
+            risk = 'Moderate Risk'
+        else:
+            risk = 'High Risk'
+
+        nice_class = {
+            'glioma': 'Glioma',
+            'meningioma': 'Meningioma',
+            'pituitary': 'Pituitary Tumor',
+            'notumor': 'No Tumor',
+            'no_tumor': 'No Tumor'
+        }.get(pred_class.lower(), pred_class.replace('_', ' ').title())
+
+        prediction_text = 'No Significant Brain Tumor Pattern Detected' if nice_class == 'No Tumor' else f'{nice_class} Pattern Detected'
+
+        patient = {
+            'name': request.form.get('patient_name', 'Patient'),
+            'age': request.form.get('age', 'N/A'),
+            'gender': request.form.get('gender', 'N/A')
+        }
+
+        input_data = {
+            'mri_file': filename,
+            'predicted_class': nice_class,
+            'model_confidence': f"{confidence * 100:.2f}%"
+        }
+
+        with get_db() as db:
+            cursor = db.execute(
+                '''INSERT INTO reports (user_id, report_type, patient_name, patient_age, patient_gender,
+                   input_data, prediction, probability, risk_level)
+                   VALUES (?,?,?,?,?,?,?,?,?)''',
+                (session['user_id'], 'brain', patient['name'], patient['age'], patient['gender'],
+                 json.dumps(input_data), prediction_text, tumor_prob, risk)
+            )
+            db.commit()
+            report_id = cursor.lastrowid
+
+        display_data = {
+            'Gender': patient['gender'],
+            'Age': patient['age'],
+            'MRI Filename': filename,
+            'Predicted Class': nice_class,
+            'Model Confidence': f"{confidence * 100:.1f}%"
+        }
+        pdf_file = generate_pdf_report('brain', patient, display_data, prediction_text, tumor_prob, risk, report_id)
+
+        with get_db() as db:
+            db.execute('UPDATE reports SET report_file=? WHERE id=?', (pdf_file, report_id))
+            db.commit()
+
+        gauge = gauge_chart(tumor_prob, risk)
+        return jsonify({
+            'success': True,
+            'prediction': prediction_text,
+            'probability': round(tumor_prob * 100, 1),
+            'confidence': round(confidence * 100, 1),
+            'predicted_class': nice_class,
+            'risk_level': risk,
+            'gauge_chart': gauge,
+            'report_id': report_id,
+            'pdf_file': pdf_file
+        })
+
+    with get_db() as db:
+        user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
+    return render_template('predict_brain.html', user=user, meta=brain_meta, brain_available=brain_available)
+
 @app.route('/eda/<model_type>')
 def eda(model_type):
     if not logged_in(): return redirect(url_for('index'))
+    if model_type not in ('heart', 'diabetes'):
+        return redirect(url_for('dashboard'))
     charts = get_eda_charts(model_type)
     meta   = heart_meta if model_type == 'heart' else diabetes_meta
     with get_db() as db:
@@ -595,8 +805,9 @@ def api_stats():
         total          = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=?", (session['user_id'],)).fetchone()['c']
         heart_count    = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='heart'", (session['user_id'],)).fetchone()['c']
         diabetes_count = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='diabetes'", (session['user_id'],)).fetchone()['c']
+        brain_count    = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND report_type='brain'", (session['user_id'],)).fetchone()['c']
         high_risk      = db.execute("SELECT COUNT(*) as c FROM reports WHERE user_id=? AND risk_level='High Risk'", (session['user_id'],)).fetchone()['c']
-    return jsonify({'total': total, 'heart': heart_count, 'diabetes': diabetes_count, 'high_risk': high_risk})
+    return jsonify({'total': total, 'heart': heart_count, 'diabetes': diabetes_count, 'brain': brain_count, 'high_risk': high_risk})
 
 @app.route('/terms')
 def terms():
@@ -666,6 +877,7 @@ def admin_view():
         <div class="stat"><h3>{len(reports)}</h3><p>Total Reports</p></div>
         <div class="stat"><h3>{sum(1 for r in reports if r["report_type"]=="heart")}</h3><p>Heart Reports</p></div>
         <div class="stat"><h3>{sum(1 for r in reports if r["report_type"]=="diabetes")}</h3><p>Diabetes Reports</p></div>
+        <div class="stat"><h3>{sum(1 for r in reports if r["report_type"]=="brain")}</h3><p>Brain Reports</p></div>
         <div class="stat"><h3>{sum(1 for r in reports if r["risk_level"]=="High Risk")}</h3><p>High Risk Cases</p></div>
     </div>'''
     html += f'<h2>Users ({len(users)} total)</h2><table>'

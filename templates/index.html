@@ -14,7 +14,7 @@
     </h1>
     <p style="font-size:1.15rem;color:var(--muted);max-width:600px;margin:0 auto 40px;line-height:1.7;">
       Advanced machine learning models trained on thousands of patient records to detect 
-      <strong style="color:var(--text)">Heart Disease</strong> and <strong style="color:var(--text)">Diabetes</strong> risk 
+      <strong style="color:var(--text)">Heart Disease</strong>, <strong style="color:var(--text)">Diabetes</strong> and <strong style="color:var(--text)">Brain Tumor</strong> risk 
       with clinical-grade accuracy.
     </p>
     <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
@@ -24,6 +24,9 @@
         </a>
         <a href="/predict/diabetes" class="btn btn-cyan" style="font-size:1.05rem;padding:16px 36px;">
           <i class="fas fa-syringe"></i> Diabetes Detection
+        </a>
+        <a href="/predict/brain" class="btn btn-green" style="font-size:1.05rem;padding:16px 36px;">
+          <i class="fas fa-brain"></i> Brain Tumor Detection
         </a>
       {% else %}
         <a href="#" onclick="openModal('registerModal')" class="btn btn-primary" style="font-size:1.05rem;padding:16px 36px;">
@@ -90,6 +93,7 @@
     {% set features = [
       ('fa-heartbeat','Heart Disease Detection','#ff6b6b','Predict 10-year cardiovascular risk using 15 clinical parameters with Gradient Boosting ML.'),
       ('fa-syringe','Diabetes Detection','#00d4ff','Detect diabetes risk from glucose, BMI, HbA1c & more with 97.2% accuracy.'),
+      ('fa-brain','Brain Tumor Detection','#06d6a0','Analyze MRI images with a deep-learning model to classify potential tumor patterns.'),
       ('fa-chart-bar','EDA & Visualizations','#7c3aed','Deep exploratory analysis with interactive charts, correlations & distributions.'),
       ('fa-file-medical-alt','PDF Report Generation','#06d6a0','Professional health reports with risk analysis, parameters & recommendations.'),
       ('fa-history','Report History','#ffd166','Save and access all your prediction reports, track health trends over time.'),
@@ -113,7 +117,7 @@
     <div class="section-tag"><i class="fas fa-microscope"></i> Detections</div>
     <h2 style="font-size:2.5rem;font-weight:800;">Choose Your Prediction</h2>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:32px;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:32px;">
     <!-- Heart Card -->
     <div class="glass" style="padding:40px;position:relative;overflow:hidden;">
       <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,107,107,0.15) 0%,transparent 70%);border-radius:50%;"></div>
@@ -157,6 +161,29 @@
           <a href="/predict/diabetes" class="btn btn-cyan"><i class="fas fa-arrow-right"></i> Detect Now</a>
         {% else %}
           <a href="#" onclick="openModal('loginModal')" class="btn btn-cyan"><i class="fas fa-arrow-right"></i> Get Started</a>
+        {% endif %}
+      </div>
+    </div>
+    <!-- Brain Card -->
+    <div class="glass" style="padding:40px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(6,214,160,0.16) 0%,transparent 70%);border-radius:50%;"></div>
+      <i class="fas fa-brain" style="font-size:3rem;color:var(--green);margin-bottom:20px;display:block;"></i>
+      <h3 style="font-size:1.5rem;font-weight:800;margin-bottom:12px;">Brain Tumor Detection</h3>
+      <p style="color:var(--muted);line-height:1.7;margin-bottom:24px;">Upload MRI scans to classify potential tumor patterns (Glioma, Meningioma, Pituitary or No Tumor) using deep learning.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;">
+        {% for param in ['MRI Image','Glioma','Meningioma','Pituitary','No Tumor'] %}
+        <span style="padding:4px 12px;border-radius:50px;background:rgba(6,214,160,0.1);border:1px solid rgba(6,214,160,0.2);font-size:0.8rem;color:var(--green);">{{param}}</span>
+        {% endfor %}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--green);">MRI AI</div>
+          <div style="font-size:0.8rem;color:var(--muted);">Image Classification</div>
+        </div>
+        {% if user %}
+          <a href="/predict/brain" class="btn btn-green"><i class="fas fa-arrow-right"></i> Detect Now</a>
+        {% else %}
+          <a href="#" onclick="openModal('loginModal')" class="btn btn-green"><i class="fas fa-arrow-right"></i> Get Started</a>
         {% endif %}
       </div>
     </div>

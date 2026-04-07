@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}Brain Tumor Detection - Healthy AI{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:40px 32px;">
+  <div style="margin-bottom:32px;">
+    <a href="/dashboard" style="color:var(--muted);text-decoration:none;font-size:0.9rem;"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    <div style="margin-top:16px;">
+      <div class="section-tag" style="background:rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.35);color:var(--purple);"><i class="fas fa-brain"></i> Brain Tumor Detection</div>
+      <h1 style="font-size:2rem;font-weight:800;margin-top:8px;">MRI Tumor Risk Assessment</h1>
+      <p style="color:var(--muted);margin-top:4px;">Upload an MRI image to classify tumor pattern and risk level</p>
+      {% if not brain_available %}
+      <div style="margin-top:14px;padding:10px 14px;border-radius:10px;background:rgba(255,209,102,0.12);border:1px solid rgba(255,209,102,0.3);color:var(--yellow);font-size:0.86rem;">
+        Brain model is not trained yet on this deployment. Run training first to enable prediction.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 420px;gap:32px;align-items:start;">
+    <div class="glass" style="padding:40px;">
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:28px;"><i class="fas fa-user-md" style="color:var(--purple)"></i> Patient & MRI Details</h2>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label><i class="fas fa-user"></i> Patient Full Name</label>
+          <input type="text" id="patient_name" class="form-input" placeholder="Patient Name">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-birthday-cake"></i> Age</label>
+          <input type="number" id="age" class="form-input" placeholder="35" min="1" max="120" value="35">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-venus-mars"></i> Gender</label>
+          <select id="gender" class="form-input">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label><i class="fas fa-image"></i> MRI Image (JPG/PNG)</label>
+          <input type="file" id="mri_image" class="form-input" accept="image/png,image/jpeg,image/jpg">
+        </div>
+      </div>
+
+      <button id="predictBtn" class="btn btn-primary" style="width:100%;justify-content:center;padding:16px;font-size:1.05rem;" onclick="runPrediction()" {% if not brain_available %}disabled{% endif %}>
+        <i class="fas fa-brain"></i> Run AI Prediction
+      </button>
+    </div>
+
+    <div>
+      <div class="glass" style="padding:28px;margin-bottom:20px;">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:12px;"><i class="fas fa-info-circle" style="color:var(--purple)"></i> Model Classes</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% for cls in meta.classes %}
+          <span style="padding:5px 12px;border-radius:50px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.24);font-size:0.8rem;color:var(--purple);">{{ cls.replace('_', ' ').title() }}</span>
+          {% endfor %}
+        </div>
+        <div style="margin-top:14px;color:var(--muted);font-size:0.85rem;">Accuracy: <span style="color:var(--green);font-weight:700;">{{ meta.accuracy }}%</span></div>
+      </div>
+
+      <div id="resultBox" style="display:none;">
+        <div class="glass" style="padding:32px;text-align:center;border:1px solid rgba(124,58,237,0.25);">
+          <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;">Prediction Result</div>
+          <div id="resultTitle" style="font-size:1.3rem;font-weight:800;margin-bottom:8px;"></div>
+          <div id="subTitle" style="font-size:0.9rem;color:var(--muted);margin-bottom:10px;"></div>
+          <div id="resultBadge" style="margin-bottom:20px;display:flex;justify-content:center;"></div>
+          <div id="gaugeImg" style="margin-bottom:16px;"></div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+            <a id="pdfBtn" href="#" class="btn btn-green btn-sm" style="display:none;"><i class="fas fa-file-pdf"></i> Download Report</a>
+            <button class="btn btn-glass btn-sm" onclick="resetForm()"><i class="fas fa-redo"></i> New Test</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="loadingBox" style="display:none;">
+        <div class="glass" style="padding:48px;text-align:center;">
+          <div class="spinner" style="margin:0 auto 16px;width:40px;height:40px;border-width:4px;border-top-color:var(--purple);"></div>
+          <div style="color:var(--muted);font-size:0.9rem;">Analyzing MRI image...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function runPrediction() {
+  const name = document.getElementById('patient_name').value || 'Patient';
+  const age = document.getElementById('age').value;
+  const gender = document.getElementById('gender').value;
+  const fileInput = document.getElementById('mri_image');
+
+  if (!age) { showToast('Please fill: age', 'error'); return; }
+  if (!fileInput.files.length) { showToast('Please upload MRI image', 'error'); return; }
+
+  const form = new FormData();
+  form.append('patient_name', name);
+  form.append('age', age);
+  form.append('gender', gender);
+  form.append('mri_image', fileInput.files[0]);
+
+  document.getElementById('predictBtn').disabled = true;
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('loadingBox').style.display = 'block';
+
+  try {
+    const r = await fetch('/predict/brain', { method: 'POST', body: form });
+    const d = await r.json();
+    document.getElementById('loadingBox').style.display = 'none';
+
+    if (!d.success) {
+      showToast(d.msg || 'Prediction failed', 'error');
+      document.getElementById('predictBtn').disabled = false;
+      return;
+    }
+
+    document.getElementById('resultTitle').textContent = d.prediction;
+    document.getElementById('subTitle').textContent = `Class: ${d.predicted_class} | Confidence: ${d.confidence}%`;
+    const badgeClass = d.risk_level === 'Low Risk' ? 'badge-low' : d.risk_level === 'Moderate Risk' ? 'badge-moderate' : 'badge-high';
+    document.getElementById('resultBadge').innerHTML = `<span class="badge ${badgeClass}"><i class="fas fa-circle"></i> ${d.risk_level} | ${d.probability}%</span>`;
+    document.getElementById('gaugeImg').innerHTML = `<img src="data:image/png;base64,${d.gauge_chart}" style="width:100%;max-width:300px;">`;
+
+    const pdfBtn = document.getElementById('pdfBtn');
+    pdfBtn.style.display = 'inline-flex';
+    pdfBtn.href = `/download/${d.pdf_file}`;
+
+    document.getElementById('resultBox').style.display = 'block';
+    showToast('Prediction complete!', 'success');
+  } catch (e) {
+    document.getElementById('loadingBox').style.display = 'none';
+    showToast('Prediction failed. Try again.', 'error');
+  }
+
+  document.getElementById('predictBtn').disabled = false;
+}
+
+function resetForm() {
+  document.getElementById('resultBox').style.display = 'none';
+  document.getElementById('loadingBox').style.display = 'none';
+}
+</script>
+{% endblock %}

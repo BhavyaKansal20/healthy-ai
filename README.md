@@ -43,11 +43,11 @@
 
 <div align="center">
 
-| 🫀 Heart Disease | 💉 Diabetes | 📄 PDF Reports | 🔐 Auth System | 📊 EDA Engine |
+| 🫀 Heart Disease | 💉 Diabetes | 🧠 Brain Tumor | 📄 PDF Reports | 🔐 Auth System |
 |:---:|:---:|:---:|:---:|:---:|
-| Gradient Boosting | Random Forest | Auto-Generated | SHA-256 Hashed | Built-in Charts |
-| 83.7% Accuracy | 97.2% Accuracy | Downloadable | Session Auth | Feature Importance |
-| 3,600 records | 100,000 records | Risk Gauge | Private Reports | Correlation Matrix |
+| Gradient Boosting | Gradient Boosting | EfficientNet-B0 | Auto-Generated | SHA-256 Hashed |
+| 83.7% Accuracy | 97.2% Accuracy | MRI Classification | Downloadable | Session Auth |
+| 3,600 records | 100,000 records | Multi-class MRI data | Risk Gauge | Private Reports |
 
 </div>
 
@@ -81,7 +81,7 @@
 ║   │                  │             │                 │     │                │║
 ║   │  heart_model.pkl │             │  users table    │     │  ReportLab     │║
 ║   │  diabetes_  .pkl │             │  reports table  │     │  Risk Gauge    │║
-║   │  scalers.pkl     │             │  feedback table │     │  Auto-Generate │║
+║   │  brain_model.pt  │             │  feedback table │     │  Auto-Generate │║
 ║   └──────────────────┘             └─────────────────┘     └────────────────┘║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -124,22 +124,22 @@
 <div align="center">
 
 ```
-  HEART DISEASE MODEL                     DIABETES MODEL
-  ─────────────────                       ──────────────
+  HEART DISEASE MODEL                     DIABETES MODEL                    BRAIN TUMOR MODEL
+  ─────────────────                       ──────────────                    ─────────────────
 
-  Accuracy   ████████████████░░░░  83.7%  Accuracy   ███████████████████░  97.2%
-  ROC-AUC    █████████████░░░░░░░  67.2%  ROC-AUC    ████████████████████  97.6%
-  Dataset    ▓▓▓ 3,600 records            Dataset    ▓▓▓▓▓▓▓▓▓▓ 100,000 records
-  Algorithm  Gradient Boosting           Algorithm  Random Forest
+  Accuracy   ████████████████░░░░  83.7%  Accuracy   ███████████████████░  97.2%  Type      MRI Classifier
+  ROC-AUC    █████████████░░░░░░░  67.2%  ROC-AUC    ████████████████████  97.6%  Classes   4 tumor classes
+  Dataset    ▓▓▓ 3,600 records            Dataset    ▓▓▓▓▓▓▓▓▓▓ 100,000 records    Dataset   Brain MRI dataset
+  Algorithm  Gradient Boosting           Algorithm  Gradient Boosting       Algorithm EfficientNet-B0
 ```
 
-| Metric | ❤️ Heart Disease | 💉 Diabetes |
-|:--|:--:|:--:|
-| **Accuracy** | `83.7%` | `97.2%` |
-| **ROC-AUC** | `67.2%` | `97.6%` |
-| **Algorithm** | Gradient Boosting | Random Forest |
-| **Training Records** | 3,600 | 100,000 |
-| **Features Used** | 14 clinical inputs | 8 clinical inputs |
+| Metric | ❤️ Heart Disease | 💉 Diabetes | 🧠 Brain Tumor |
+|:--|:--:|:--:|:--:|
+| **Accuracy** | `83.7%` | `97.2%` | `Image-classifier dependent` |
+| **ROC-AUC** | `67.2%` | `97.6%` | `OVR multi-class` |
+| **Algorithm** | Gradient Boosting | Gradient Boosting | EfficientNet-B0 |
+| **Training Records** | 3,600 | 100,000 | MRI class folders |
+| **Features Used** | 14 clinical inputs | 8 clinical inputs | MRI image pixels |
 
 </div>
 
@@ -240,6 +240,23 @@ ML model trained on **100K+ clinical records** with top-tier accuracy.
 </details>
 
 <details>
+<summary><b>🧠 Brain Tumor Detection</b> — click to expand</summary>
+
+<br>
+
+Deep-learning image classifier trained on MRI scans to detect:
+
+- `Glioma`
+- `Meningioma`
+- `Pituitary`
+- `No Tumor`
+
+**Input:** MRI image (JPG/PNG) + patient basic information.  
+**Output:** Predicted class, confidence score, risk level and downloadable PDF report.
+
+</details>
+
+<details>
 <summary><b>📊 Exploratory Data Analysis</b> — click to expand</summary>
 
 <br>
@@ -294,7 +311,8 @@ Every prediction triggers auto-generation of a professional medical report:
   GET  /                  Landing        GET  /dashboard
   GET  /login             Auth Page      POST /predict/heart
   GET  /terms             ToS            POST /predict/diabetes
-  GET  /privacy           Policy         GET  /eda/heart
+  GET  /privacy           Policy         POST /predict/brain
+                                         GET  /eda/heart
                                          GET  /eda/diabetes
                                          GET  /reports
                                          GET  /download/<file>
@@ -318,7 +336,8 @@ healthy-ai/
 │
 ├── 📂 data_files/
 │   ├── heart.csv                ← Framingham Heart Study dataset
-│   └── diabetes.csv             ← 100K clinical records
+│   ├── diabetes.csv             ← 100K clinical records
+│   └── brain_tumor_mri_dataset/ ← Kaggle MRI dataset (Training/Testing)
 │
 ├── 📂 models/
 │   ├── heart_model.pkl          ← Trained GradientBoostingClassifier
@@ -326,7 +345,10 @@ healthy-ai/
 │   ├── heart_meta.json          ← Model metadata & thresholds
 │   ├── diabetes_model.pkl       ← Trained RandomForestClassifier
 │   ├── diabetes_scaler.pkl      ← StandardScaler for diabetes features
-│   └── diabetes_le_*.pkl        ← LabelEncoders for categorical inputs
+│   ├── diabetes_le_*.pkl        ← LabelEncoders for categorical inputs
+│   ├── brain_tumor_model.pt     ← Trained PyTorch model
+│   ├── brain_tumor_labels.pkl   ← Brain class labels
+│   └── brain_tumor_meta.json    ← Brain model metadata
 │
 ├── 📂 static/
 │   ├── img/logo.png
@@ -340,6 +362,7 @@ healthy-ai/
     ├── reports.html             ← Report history
     ├── predict_heart.html       ← Heart prediction form
     ├── predict_diabetes.html    ← Diabetes prediction form
+    ├── predict_brain.html       ← Brain MRI prediction form
     ├── eda.html                 ← EDA visualizations
     ├── terms.html
     └── privacy.html
@@ -377,6 +400,7 @@ pip install -r requirements.txt
 python train_models.py
 # ✔ heart_model.pkl saved
 # ✔ diabetes_model.pkl saved
+# ✔ brain_tumor_model.pt saved
 # ✔ scalers and encoders exported
 ```
 
@@ -399,7 +423,8 @@ python app.py
 |:--|:--|:--|
 | **Language** | ![Python](https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white) | Core runtime |
 | **Backend** | ![Flask](https://img.shields.io/badge/Flask-000000?style=flat-square&logo=flask&logoColor=white) | Web framework & routing |
-| **ML** | ![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikit-learn&logoColor=white) | Model training & inference |
+| **ML (Tabular)** | ![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikit-learn&logoColor=white) | Heart/Diabetes training & inference |
+| **ML (Vision)** | ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white) | Brain MRI model training & inference |
 | **Database** | ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white) | Users, reports, feedback |
 | **PDF** | ![ReportLab](https://img.shields.io/badge/ReportLab-CC0000?style=flat-square) | Auto PDF generation |
 | **Analytics** | ![Matplotlib](https://img.shields.io/badge/Matplotlib-11557c?style=flat-square&logo=python&logoColor=white) | EDA charts & plots |
