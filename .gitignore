@@ -16,15 +16,15 @@ env/
 # Database (personal data)
 healthyai.db
 
-# ML Models (will retrain on deploy)
-models/*.pkl
-models/*.json
+# ML Models
+# Keep trained artifacts in repo for ready-to-run predictions.
 
 # Generated reports (user files)
 static/reports/*.pdf
 
 # OS files
 .DS_Store
+._*
 Thumbs.db
 
 # IDE

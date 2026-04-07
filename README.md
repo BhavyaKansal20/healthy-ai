@@ -135,8 +135,8 @@
 
 | Metric | ❤️ Heart Disease | 💉 Diabetes | 🧠 Brain Tumor |
 |:--|:--:|:--:|:--:|
-| **Accuracy** | `83.7%` | `97.2%` | `Image-classifier dependent` |
-| **ROC-AUC** | `67.2%` | `97.6%` | `OVR multi-class` |
+| **Accuracy** | `83.7%` | `97.2%` | `91.62%` |
+| **ROC-AUC** | `67.2%` | `97.6%` | `98.15%` |
 | **Algorithm** | Gradient Boosting | Gradient Boosting | EfficientNet-B0 |
 | **Training Records** | 3,600 | 100,000 | MRI class folders |
 | **Features Used** | 14 clinical inputs | 8 clinical inputs | MRI image pixels |
