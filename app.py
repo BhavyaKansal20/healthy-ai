@@ -5,6 +5,7 @@ Heart Disease & Diabetes Prediction Platform
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from reportlab.platypus import Image
 import sqlite3, hashlib, json, os, io, base64, re
+import threading
 from datetime import datetime
 import joblib, numpy as np
 from werkzeug.utils import secure_filename
@@ -128,6 +129,8 @@ brain_labels_path = os.path.join(MODELS_DIR, 'brain_tumor_labels.pkl')
 brain_available = os.path.exists(brain_pt_path)
 brain_device = None
 brain_transform = None
+brain_warming = False
+brain_warm_error = None
 
 if os.path.exists(brain_meta_path):
     try:
@@ -144,7 +147,7 @@ if os.path.exists(brain_labels_path):
 
 
 def _ensure_brain_runtime_loaded():
-    global brain_model, brain_transform, brain_device, brain_classes
+    global brain_model, brain_transform, brain_device, brain_classes, brain_warming, brain_warm_error
     if brain_model is not None and brain_transform is not None and brain_device is not None:
         return True, None
     if not brain_available:
@@ -153,6 +156,7 @@ def _ensure_brain_runtime_loaded():
         return False, 'PyTorch runtime is unavailable in this deployment.'
 
     try:
+        brain_warming = True
         class BrainTumorNet(nn.Module):
             def __init__(self, num_classes=4):
                 super().__init__()
@@ -178,15 +182,45 @@ def _ensure_brain_runtime_loaded():
         brain_model.load_state_dict(ckpt['state_dict'])
         brain_model.eval()
 
+        # Keep CPU inference predictable on small instances.
+        try:
+            if brain_device.type == 'cpu':
+                torch.set_num_threads(max(1, min(4, os.cpu_count() or 1)))
+        except Exception:
+            pass
+
         brain_transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
+
+        # One-time warmup to avoid first-user latency spike.
+        with torch.inference_mode():
+            dummy = torch.zeros((1, 3, 224, 224), device=brain_device)
+            _ = brain_model(dummy)
+        brain_warm_error = None
+        brain_warming = False
         return True, None
     except Exception as e:
         print(f"Failed to initialize brain runtime: {e}")
+        brain_warm_error = str(e)
+        brain_warming = False
         return False, 'Brain model failed to initialize at runtime.'
+
+
+def _start_brain_warmup_async():
+    if not brain_available:
+        return
+
+    def _warm():
+        _ensure_brain_runtime_loaded()
+
+    t = threading.Thread(target=_warm, daemon=True)
+    t.start()
+
+
+_start_brain_warmup_async()
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -719,6 +753,9 @@ def predict_brain():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
+        if brain_warming and brain_model is None:
+            return jsonify({'success': False, 'msg': 'Brain model is warming up. Please retry in 20-30 seconds.'}), 503
+
         ok, err = _ensure_brain_runtime_loaded()
         if not ok:
             return jsonify({'success': False, 'msg': err}), 503
@@ -735,7 +772,7 @@ def predict_brain():
         image = PILImage.open(save_path).convert('RGB')
         x = brain_transform(image).unsqueeze(0).to(brain_device)
 
-        with torch.no_grad():
+        with torch.inference_mode():
             logits = brain_model(x)
             probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
 
