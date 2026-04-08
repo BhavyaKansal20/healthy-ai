@@ -31,17 +31,31 @@ def _ensure_matplotlib():
     import matplotlib.pyplot as _plt
     plt = _plt
 
-try:
-    import torch
-    import torch.nn as nn
-    from torchvision import models, transforms
-    from PIL import Image as PILImage
-except Exception:
-    torch = None
-    nn = None
-    models = None
-    transforms = None
-    PILImage = None
+torch = None
+nn = None
+models = None
+transforms = None
+PILImage = None
+
+
+def _ensure_torch_modules():
+    global torch, nn, models, transforms, PILImage
+    if torch is not None:
+        return True
+    try:
+        import torch as _torch
+        import torch.nn as _nn
+        from torchvision import models as _models, transforms as _transforms
+        from PIL import Image as _PILImage
+        torch = _torch
+        nn = _nn
+        models = _models
+        transforms = _transforms
+        PILImage = _PILImage
+        return True
+    except Exception as e:
+        print(f"Torch runtime unavailable: {e}")
+        return False
 
 app = Flask(__name__)
 app.secret_key = 'healthyai_secret_2026_secure'
@@ -100,25 +114,6 @@ with open(os.path.join(MODELS_DIR, 'diabetes_meta.json')) as f:
     diabetes_meta = json.load(f)
 
 
-if nn is not None and models is not None:
-    class BrainTumorNet(nn.Module):
-        def __init__(self, num_classes=4):
-            super().__init__()
-            self.backbone = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
-            in_features = self.backbone.classifier[1].in_features
-            self.backbone.classifier[1] = nn.Sequential(
-                nn.Dropout(p=0.30),
-                nn.Linear(in_features, num_classes)
-            )
-
-        def forward(self, x):
-            return self.backbone(x)
-else:
-    class BrainTumorNet:
-        def __init__(self, *args, **kwargs):
-            raise RuntimeError('PyTorch is required for brain tumor model usage.')
-
-
 brain_model = None
 brain_meta = {
     'accuracy': 0,
@@ -127,38 +122,71 @@ brain_meta = {
     'classes': ['glioma', 'meningioma', 'notumor', 'pituitary']
 }
 brain_classes = ['glioma', 'meningioma', 'notumor', 'pituitary']
-brain_available = False
-brain_device = torch.device('cuda' if (torch is not None and torch.cuda.is_available()) else 'cpu') if torch is not None else None
+brain_pt_path = os.path.join(MODELS_DIR, 'brain_tumor_model.pt')
+brain_meta_path = os.path.join(MODELS_DIR, 'brain_tumor_meta.json')
+brain_labels_path = os.path.join(MODELS_DIR, 'brain_tumor_labels.pkl')
+brain_available = os.path.exists(brain_pt_path)
+brain_device = None
+brain_transform = None
 
-if torch is not None and nn is not None and models is not None and transforms is not None:
-    brain_pt_path = os.path.join(MODELS_DIR, 'brain_tumor_model.pt')
-    brain_meta_path = os.path.join(MODELS_DIR, 'brain_tumor_meta.json')
-    brain_labels_path = os.path.join(MODELS_DIR, 'brain_tumor_labels.pkl')
-    if os.path.exists(brain_pt_path):
-        try:
-            ckpt = torch.load(brain_pt_path, map_location=brain_device)
-            classes = ckpt.get('classes', None)
-            if classes:
-                brain_classes = classes
-            elif os.path.exists(brain_labels_path):
-                brain_classes = joblib.load(brain_labels_path)
+if os.path.exists(brain_meta_path):
+    try:
+        with open(brain_meta_path) as f:
+            brain_meta = json.load(f)
+    except Exception as e:
+        print(f"Failed to read brain meta: {e}")
 
-            brain_model = BrainTumorNet(num_classes=len(brain_classes)).to(brain_device)
-            brain_model.load_state_dict(ckpt['state_dict'])
-            brain_model.eval()
-            brain_available = True
+if os.path.exists(brain_labels_path):
+    try:
+        brain_classes = joblib.load(brain_labels_path)
+    except Exception as e:
+        print(f"Failed to read brain labels: {e}")
 
-            if os.path.exists(brain_meta_path):
-                with open(brain_meta_path) as f:
-                    brain_meta = json.load(f)
-        except Exception as e:
-            print(f"Failed to load brain tumor model: {e}")
 
-brain_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-]) if transforms is not None else None
+def _ensure_brain_runtime_loaded():
+    global brain_model, brain_transform, brain_device, brain_classes
+    if brain_model is not None and brain_transform is not None and brain_device is not None:
+        return True, None
+    if not brain_available:
+        return False, 'Brain tumor model is not available in models folder.'
+    if not _ensure_torch_modules():
+        return False, 'PyTorch runtime is unavailable in this deployment.'
+
+    try:
+        class BrainTumorNet(nn.Module):
+            def __init__(self, num_classes=4):
+                super().__init__()
+                self.backbone = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
+                in_features = self.backbone.classifier[1].in_features
+                self.backbone.classifier[1] = nn.Sequential(
+                    nn.Dropout(p=0.30),
+                    nn.Linear(in_features, num_classes)
+                )
+
+            def forward(self, x):
+                return self.backbone(x)
+
+        brain_device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        ckpt = torch.load(brain_pt_path, map_location=brain_device)
+        classes = ckpt.get('classes', None)
+        if classes:
+            brain_classes = classes
+        elif os.path.exists(brain_labels_path):
+            brain_classes = joblib.load(brain_labels_path)
+
+        brain_model = BrainTumorNet(num_classes=len(brain_classes)).to(brain_device)
+        brain_model.load_state_dict(ckpt['state_dict'])
+        brain_model.eval()
+
+        brain_transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        return True, None
+    except Exception as e:
+        print(f"Failed to initialize brain runtime: {e}")
+        return False, 'Brain model failed to initialize at runtime.'
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -691,8 +719,9 @@ def predict_brain():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        if not brain_available or brain_model is None or brain_transform is None:
-            return jsonify({'success': False, 'msg': 'Brain tumor model is not trained yet. Please train and restart app.'}), 503
+        ok, err = _ensure_brain_runtime_loaded()
+        if not ok:
+            return jsonify({'success': False, 'msg': err}), 503
 
         file = request.files.get('mri_image')
         if file is None or file.filename == '':
