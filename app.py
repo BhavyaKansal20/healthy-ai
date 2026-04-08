@@ -189,12 +189,7 @@ def _ensure_brain_runtime_loaded():
         except Exception:
             pass
 
-        brain_transform = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.PILToTensor(),
-            transforms.ConvertImageDtype(torch.float32),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
+        brain_transform = 'manual'
 
         # One-time warmup to avoid first-user latency spike.
         with torch.inference_mode():
@@ -208,6 +203,18 @@ def _ensure_brain_runtime_loaded():
         brain_warm_error = str(e)
         brain_warming = False
         return False, 'Brain model failed to initialize at runtime.'
+
+
+def _pil_to_brain_tensor(image):
+    # Fully manual conversion to avoid numpy/torchvision dtype edge-cases on hosted runtimes.
+    image = image.resize((224, 224)).convert('RGB')
+    px = list(image.getdata())
+    x = torch.tensor(px, dtype=torch.float32).view(224, 224, 3).permute(2, 0, 1)
+    x = x / 255.0
+    mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32).view(3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32).view(3, 1, 1)
+    x = (x - mean) / std
+    return x.unsqueeze(0)
 
 
 def _start_brain_warmup_async():
@@ -772,7 +779,7 @@ def predict_brain():
             file.save(save_path)
 
             image = PILImage.open(save_path).convert('RGB')
-            x = brain_transform(image).unsqueeze(0).to(brain_device)
+            x = _pil_to_brain_tensor(image).to(brain_device)
 
             with torch.inference_mode():
                 logits = brain_model(x)
