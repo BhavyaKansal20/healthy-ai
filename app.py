@@ -775,9 +775,9 @@ def predict_brain():
 
             with torch.inference_mode():
                 logits = brain_model(x)
-                probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
+                probs = torch.softmax(logits, dim=1)[0].detach().cpu().tolist()
 
-            pred_idx = int(np.argmax(probs))
+            pred_idx = max(range(len(probs)), key=lambda i: probs[i])
             pred_class = brain_classes[pred_idx] if pred_idx < len(brain_classes) else 'unknown'
             confidence = float(probs[pred_idx])
             no_tumor_aliases = {'notumor', 'no_tumor', 'no-tumor', 'not tumor'}
