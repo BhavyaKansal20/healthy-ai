@@ -105,10 +105,16 @@ async function runPrediction() {
 
   try {
     const r = await fetch('/predict/brain', { method: 'POST', body: form });
-    const d = await r.json();
+    let d = null;
+    try {
+      d = await r.json();
+    } catch (_) {
+      const txt = await r.text();
+      throw new Error(`Server error (${r.status}): ${txt.slice(0, 180)}`);
+    }
     document.getElementById('loadingBox').style.display = 'none';
 
-    if (!d.success) {
+    if (!r.ok || !d.success) {
       showToast(d.msg || 'Prediction failed', 'error');
       document.getElementById('predictBtn').disabled = false;
       return;
@@ -128,7 +134,7 @@ async function runPrediction() {
     showToast('Prediction complete!', 'success');
   } catch (e) {
     document.getElementById('loadingBox').style.display = 'none';
-    showToast('Prediction failed. Try again.', 'error');
+    showToast(e?.message || 'Prediction failed. Try again.', 'error');
   }
 
   document.getElementById('predictBtn').disabled = false;

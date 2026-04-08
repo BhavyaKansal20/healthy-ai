@@ -753,100 +753,104 @@ def predict_brain():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        if brain_warming and brain_model is None:
-            return jsonify({'success': False, 'msg': 'Brain model is warming up. Please retry in 20-30 seconds.'}), 503
+        try:
+            if brain_warming and brain_model is None:
+                return jsonify({'success': False, 'msg': 'Brain model is warming up. Please retry in 20-30 seconds.'}), 503
 
-        ok, err = _ensure_brain_runtime_loaded()
-        if not ok:
-            return jsonify({'success': False, 'msg': err}), 503
+            ok, err = _ensure_brain_runtime_loaded()
+            if not ok:
+                return jsonify({'success': False, 'msg': err}), 503
 
-        file = request.files.get('mri_image')
-        if file is None or file.filename == '':
-            return jsonify({'success': False, 'msg': 'Please upload an MRI image.'}), 400
+            file = request.files.get('mri_image')
+            if file is None or file.filename == '':
+                return jsonify({'success': False, 'msg': 'Please upload an MRI image.'}), 400
 
-        filename = secure_filename(file.filename)
-        save_name = f"brain_{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-        save_path = os.path.join(UPLOADS_DIR, save_name)
-        file.save(save_path)
+            filename = secure_filename(file.filename)
+            save_name = f"brain_{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+            save_path = os.path.join(UPLOADS_DIR, save_name)
+            file.save(save_path)
 
-        image = PILImage.open(save_path).convert('RGB')
-        x = brain_transform(image).unsqueeze(0).to(brain_device)
+            image = PILImage.open(save_path).convert('RGB')
+            x = brain_transform(image).unsqueeze(0).to(brain_device)
 
-        with torch.inference_mode():
-            logits = brain_model(x)
-            probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
+            with torch.inference_mode():
+                logits = brain_model(x)
+                probs = torch.softmax(logits, dim=1)[0].cpu().numpy()
 
-        pred_idx = int(np.argmax(probs))
-        pred_class = brain_classes[pred_idx] if pred_idx < len(brain_classes) else 'unknown'
-        confidence = float(probs[pred_idx])
-        no_tumor_aliases = {'notumor', 'no_tumor', 'no-tumor', 'not tumor'}
-        tumor_prob = 1.0 - confidence if pred_class.lower().replace(' ', '') in no_tumor_aliases else confidence
+            pred_idx = int(np.argmax(probs))
+            pred_class = brain_classes[pred_idx] if pred_idx < len(brain_classes) else 'unknown'
+            confidence = float(probs[pred_idx])
+            no_tumor_aliases = {'notumor', 'no_tumor', 'no-tumor', 'not tumor'}
+            tumor_prob = 1.0 - confidence if pred_class.lower().replace(' ', '') in no_tumor_aliases else confidence
 
-        if tumor_prob < 0.3:
-            risk = 'Low Risk'
-        elif tumor_prob < 0.6:
-            risk = 'Moderate Risk'
-        else:
-            risk = 'High Risk'
+            if tumor_prob < 0.3:
+                risk = 'Low Risk'
+            elif tumor_prob < 0.6:
+                risk = 'Moderate Risk'
+            else:
+                risk = 'High Risk'
 
-        nice_class = {
-            'glioma': 'Glioma',
-            'meningioma': 'Meningioma',
-            'pituitary': 'Pituitary Tumor',
-            'notumor': 'No Tumor',
-            'no_tumor': 'No Tumor'
-        }.get(pred_class.lower(), pred_class.replace('_', ' ').title())
+            nice_class = {
+                'glioma': 'Glioma',
+                'meningioma': 'Meningioma',
+                'pituitary': 'Pituitary Tumor',
+                'notumor': 'No Tumor',
+                'no_tumor': 'No Tumor'
+            }.get(pred_class.lower(), pred_class.replace('_', ' ').title())
 
-        prediction_text = 'No Significant Brain Tumor Pattern Detected' if nice_class == 'No Tumor' else f'{nice_class} Pattern Detected'
+            prediction_text = 'No Significant Brain Tumor Pattern Detected' if nice_class == 'No Tumor' else f'{nice_class} Pattern Detected'
 
-        patient = {
-            'name': request.form.get('patient_name', 'Patient'),
-            'age': request.form.get('age', 'N/A'),
-            'gender': request.form.get('gender', 'N/A')
-        }
+            patient = {
+                'name': request.form.get('patient_name', 'Patient'),
+                'age': request.form.get('age', 'N/A'),
+                'gender': request.form.get('gender', 'N/A')
+            }
 
-        input_data = {
-            'mri_file': filename,
-            'predicted_class': nice_class,
-            'model_confidence': f"{confidence * 100:.2f}%"
-        }
+            input_data = {
+                'mri_file': filename,
+                'predicted_class': nice_class,
+                'model_confidence': f"{confidence * 100:.2f}%"
+            }
 
-        with get_db() as db:
-            cursor = db.execute(
-                '''INSERT INTO reports (user_id, report_type, patient_name, patient_age, patient_gender,
-                   input_data, prediction, probability, risk_level)
-                   VALUES (?,?,?,?,?,?,?,?,?)''',
-                (session['user_id'], 'brain', patient['name'], patient['age'], patient['gender'],
-                 json.dumps(input_data), prediction_text, tumor_prob, risk)
-            )
-            db.commit()
-            report_id = cursor.lastrowid
+            with get_db() as db:
+                cursor = db.execute(
+                    '''INSERT INTO reports (user_id, report_type, patient_name, patient_age, patient_gender,
+                       input_data, prediction, probability, risk_level)
+                       VALUES (?,?,?,?,?,?,?,?,?)''',
+                    (session['user_id'], 'brain', patient['name'], patient['age'], patient['gender'],
+                     json.dumps(input_data), prediction_text, tumor_prob, risk)
+                )
+                db.commit()
+                report_id = cursor.lastrowid
 
-        display_data = {
-            'Gender': patient['gender'],
-            'Age': patient['age'],
-            'MRI Filename': filename,
-            'Predicted Class': nice_class,
-            'Model Confidence': f"{confidence * 100:.1f}%"
-        }
-        pdf_file = generate_pdf_report('brain', patient, display_data, prediction_text, tumor_prob, risk, report_id)
+            display_data = {
+                'Gender': patient['gender'],
+                'Age': patient['age'],
+                'MRI Filename': filename,
+                'Predicted Class': nice_class,
+                'Model Confidence': f"{confidence * 100:.1f}%"
+            }
+            pdf_file = generate_pdf_report('brain', patient, display_data, prediction_text, tumor_prob, risk, report_id)
 
-        with get_db() as db:
-            db.execute('UPDATE reports SET report_file=? WHERE id=?', (pdf_file, report_id))
-            db.commit()
+            with get_db() as db:
+                db.execute('UPDATE reports SET report_file=? WHERE id=?', (pdf_file, report_id))
+                db.commit()
 
-        gauge = gauge_chart(tumor_prob, risk)
-        return jsonify({
-            'success': True,
-            'prediction': prediction_text,
-            'probability': round(tumor_prob * 100, 1),
-            'confidence': round(confidence * 100, 1),
-            'predicted_class': nice_class,
-            'risk_level': risk,
-            'gauge_chart': gauge,
-            'report_id': report_id,
-            'pdf_file': pdf_file
-        })
+            gauge = gauge_chart(tumor_prob, risk)
+            return jsonify({
+                'success': True,
+                'prediction': prediction_text,
+                'probability': round(tumor_prob * 100, 1),
+                'confidence': round(confidence * 100, 1),
+                'predicted_class': nice_class,
+                'risk_level': risk,
+                'gauge_chart': gauge,
+                'report_id': report_id,
+                'pdf_file': pdf_file
+            })
+        except Exception as e:
+            print(f"Brain prediction error: {e}")
+            return jsonify({'success': False, 'msg': f'Prediction error: {str(e)}'}), 500
 
     with get_db() as db:
         user = db.execute('SELECT * FROM users WHERE id=?', (session['user_id'],)).fetchone()
