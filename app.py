@@ -8,10 +8,6 @@ import sqlite3, hashlib, json, os, io, base64, re
 from datetime import datetime
 import joblib, numpy as np
 from werkzeug.utils import secure_filename
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
@@ -20,6 +16,20 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 import warnings
 warnings.filterwarnings('ignore')
+
+plt = None
+
+
+def _ensure_matplotlib():
+    global plt
+    if plt is not None:
+        return
+    # Render containers may have read-only HOME; keep font cache in /tmp.
+    os.environ.setdefault('MPLCONFIGDIR', '/tmp/matplotlib')
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as _plt
+    plt = _plt
 
 try:
     import torch
@@ -187,6 +197,7 @@ def hash_pw(pw): return hashlib.sha256(pw.encode()).hexdigest()
 def logged_in(): return 'user_id' in session
 
 def fig_to_b64(fig):
+    _ensure_matplotlib()
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches='tight', transparent=True, dpi=110)
     buf.seek(0)
@@ -197,6 +208,7 @@ def fig_to_b64(fig):
 PALETTE = ['#00d4ff', '#7c3aed', '#06d6a0', '#ff6b6b', '#ffd166', '#118ab2']
 
 def chart_feature_importance(meta, title):
+    _ensure_matplotlib()
     fi = meta['feature_importance']
     labels = list(fi.keys())
     vals = list(fi.values())
@@ -218,6 +230,7 @@ def chart_feature_importance(meta, title):
     return fig_to_b64(fig)
 
 def chart_class_dist(meta, labels_map, title):
+    _ensure_matplotlib()
     dist = meta['class_distribution']
     keys = list(dist.keys())
     vals = [dist[k] for k in keys]
@@ -233,6 +246,7 @@ def chart_class_dist(meta, labels_map, title):
     return fig_to_b64(fig)
 
 def chart_correlation(meta, title):
+    _ensure_matplotlib()
     corr = meta['correlation']
     labels = list(corr.keys())
     vals = list(corr.values())
@@ -251,6 +265,7 @@ def chart_correlation(meta, title):
     return fig_to_b64(fig)
 
 def get_eda_charts(model_type):
+    _ensure_matplotlib()
     import pandas as pd
     if model_type == 'heart':
         df = pd.read_csv(os.path.join(BASE, 'data_files', 'heart.csv'))
@@ -295,6 +310,7 @@ def get_eda_charts(model_type):
         return {'fi': fi_chart, 'dist': dist_chart, 'corr': corr_chart, 'age': bmi_chart}
 
 def gauge_chart(probability, risk_level):
+    _ensure_matplotlib()
     fig, ax = plt.subplots(figsize=(5, 3), subplot_kw={'projection': 'polar'})
     fig.patch.set_alpha(0)
     ax.set_facecolor((0,0,0,0))
