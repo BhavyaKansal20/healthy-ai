@@ -2,7 +2,18 @@
 {% block title %}Sign In - Healthy AI{% endblock %}
 {% block content %}
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;">
-  <script>window.onload = () => openModal('loginModal');</script>
+  <script>
+    window.onload = () => {
+      openModal('loginModal');
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('verified') === '1') {
+        showToast('Email verified. You can sign in now.', 'success');
+      }
+      {% if oauth_error %}
+      showToast({{ oauth_error|tojson }}, 'error');
+      {% endif %}
+    };
+  </script>
   <div style="text-align:center;">
     <div style="font-size:3rem;margin-bottom:16px;">🩺</div>
     <h2 style="font-size:1.5rem;font-weight:700;color:var(--muted);">Redirecting to login...</h2>

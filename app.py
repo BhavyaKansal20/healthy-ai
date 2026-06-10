@@ -7,7 +7,7 @@ from authlib.integrations.flask_client import OAuth
 from reportlab.platypus import Image
 import sqlite3, hashlib, json, os, io, base64, re, secrets
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 import joblib, numpy as np
 import smtplib
 from email.message import EmailMessage
@@ -276,6 +276,8 @@ def init_db():
             provider_id TEXT,
             avatar_url TEXT,
             email_verified INTEGER NOT NULL DEFAULT 0,
+            verification_token TEXT,
+            verification_expires_at TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )''')
         db.execute('''CREATE TABLE IF NOT EXISTS reports (
@@ -303,6 +305,10 @@ def init_db():
             alter_statements.append('ALTER TABLE users ADD COLUMN avatar_url TEXT')
         if 'email_verified' not in columns:
             alter_statements.append('ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0')
+        if 'verification_token' not in columns:
+            alter_statements.append('ALTER TABLE users ADD COLUMN verification_token TEXT')
+        if 'verification_expires_at' not in columns:
+            alter_statements.append('ALTER TABLE users ADD COLUMN verification_expires_at TEXT')
         for stmt in alter_statements:
             db.execute(stmt)
         db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider_identity ON users(provider, provider_id)')
@@ -343,8 +349,8 @@ def upsert_oauth_user(provider, provider_id, name, email, avatar_url=None, email
             return db.execute('SELECT * FROM users WHERE id=?', (user['id'],)).fetchone()
 
         db.execute(
-            '''INSERT INTO users (name, email, password, provider, provider_id, avatar_url, email_verified)
-               VALUES (?,?,?,?,?,?,?)''',
+            '''INSERT INTO users (name, email, password, provider, provider_id, avatar_url, email_verified, verification_token, verification_expires_at)
+               VALUES (?,?,?,?,?,?,?,?,?)''',
             (
                 name or email.split('@')[0],
                 email,
@@ -353,10 +359,71 @@ def upsert_oauth_user(provider, provider_id, name, email, avatar_url=None, email
                 provider_id,
                 avatar_url,
                 int(bool(email_verified)),
+                None,
+                None,
             )
         )
         db.commit()
         return db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+
+
+def send_smtp_email(to_email, subject, body, attachment_path=None, attachment_name=None):
+    smtp_host = os.environ.get('SMTP_HOST')
+    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+    smtp_username = os.environ.get('SMTP_USERNAME')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+    from_email = os.environ.get('FROM_EMAIL', smtp_username)
+
+    if not all([smtp_host, smtp_username, smtp_password, from_email, to_email]):
+        return False
+
+    msg = EmailMessage()
+    msg['From'] = from_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.set_content(body)
+
+    if attachment_path and os.path.exists(attachment_path):
+        with open(attachment_path, 'rb') as f:
+            msg.add_attachment(f.read(), maintype='application', subtype='pdf', filename=attachment_name or os.path.basename(attachment_path))
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+        return True
+    except Exception as exc:
+        print(f"Email send failed: {exc}")
+        return False
+
+
+def send_verification_email(user_name, user_email, token):
+    verify_url = url_for('verify_email', token=token, _external=True)
+    subject = 'Verify your Healthy AI email'
+    body = (
+        f"Hello {user_name or 'there'},\n\n"
+        "Thanks for signing up for Healthy AI. Please verify your email address by opening the link below:\n\n"
+        f"{verify_url}\n\n"
+        "This link will expire in 24 hours.\n\n"
+        "If you did not sign up, you can ignore this email.\n\n"
+        "Regards,\nHealthy AI"
+    )
+    return send_smtp_email(user_email, subject, body)
+
+
+def issue_email_verification(db, user_id, user_name, user_email):
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+    db.execute(
+        '''UPDATE users
+           SET email_verified=0, verification_token=?, verification_expires_at=?
+           WHERE id=?''',
+        (token, expires_at, user_id)
+    )
+    db.commit()
+    send_verification_email(user_name, user_email, token)
+    return token
 
 
 def _get_github_email(client):
@@ -751,6 +818,8 @@ def login():
         email, password = d.get('email'), d.get('password')
         with get_db() as db:
             user = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+        if user and user['provider'] == 'local' and not int(user['email_verified'] or 0):
+            return jsonify({'success': False, 'msg': 'Please verify your email first. Check your inbox for the verification link.'})
         if user and verify_pw(user['password'], password):
             session['user_id']   = user['id']
             session['user_name'] = user['name']
@@ -765,16 +834,61 @@ def register():
         name, email, password = d.get('name'), d.get('email'), d.get('password')
         try:
             with get_db() as db:
-                db.execute('INSERT INTO users (name, email, password) VALUES (?,?,?)',
-                           (name, email, hash_pw(password)))
-                db.commit()
                 user = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
-            session['user_id']   = user['id']
-            session['user_name'] = user['name']
-            return jsonify({'success': True, 'name': name})
+                if user and user['provider'] != 'local':
+                    return jsonify({'success': False, 'msg': 'This email is already linked to Google or GitHub sign-in'})
+                if user and int(user['email_verified'] or 0):
+                    return jsonify({'success': False, 'msg': 'Email already registered and verified'})
+
+                token = secrets.token_urlsafe(32)
+                expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+                if user:
+                    db.execute(
+                        '''UPDATE users
+                           SET name=?, password=?, provider='local', provider_id=NULL, avatar_url=NULL,
+                               email_verified=0, verification_token=?, verification_expires_at=?
+                           WHERE id=?''',
+                        (name, hash_pw(password), token, expires_at, user['id'])
+                    )
+                    user_id = user['id']
+                else:
+                    db.execute(
+                        '''INSERT INTO users (name, email, password, provider, provider_id, avatar_url, email_verified, verification_token, verification_expires_at)
+                           VALUES (?,?,?,?,?,?,?,?,?)''',
+                        (name, email, hash_pw(password), 'local', None, None, 0, token, expires_at)
+                    )
+                    user_id = db.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()['id']
+                db.commit()
+                send_verification_email(name, email, token)
+            return jsonify({'success': True, 'requires_verification': True, 'name': name, 'msg': 'Verification email sent. Check your inbox and click the link to activate your account.'})
         except sqlite3.IntegrityError:
             return jsonify({'success': False, 'msg': 'Email already registered'})
     return render_template('login.html')
+
+
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    with get_db() as db:
+        user = db.execute(
+            'SELECT * FROM users WHERE verification_token=? AND provider="local"',
+            (token,)
+        ).fetchone()
+        if not user:
+            return render_template('login.html', oauth_error='Verification link is invalid or expired.'), 400
+
+        expires_at = user['verification_expires_at']
+        if expires_at and datetime.utcnow() > datetime.fromisoformat(expires_at):
+            return render_template('login.html', oauth_error='Verification link expired. Please sign up again to get a new link.'), 400
+
+        db.execute(
+            '''UPDATE users
+               SET email_verified=1, verification_token=NULL, verification_expires_at=NULL
+               WHERE id=?''',
+            (user['id'],)
+        )
+        db.commit()
+    return redirect(url_for('login', verified='1'))
 
 @app.route('/logout')
 def logout():

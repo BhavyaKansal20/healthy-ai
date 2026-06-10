@@ -731,6 +731,11 @@ async function doRegister() {
     body: JSON.stringify({name, email, password: pw})
   });
   const d = await r.json();
+  if (d.success && d.requires_verification) {
+    showToast(d.msg || 'Verification email sent. Check your inbox.', 'success');
+    closeModal('registerModal');
+    return;
+  }
   if (d.success) { showToast(`Account created! Welcome, ${d.name}!`, 'success'); setTimeout(() => location.href='/dashboard', 800); }
   else showToast(d.msg, 'error');
 }
