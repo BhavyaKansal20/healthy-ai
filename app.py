@@ -399,7 +399,10 @@ def send_smtp_email(to_email, subject, body, attachment_path=None, attachment_na
 
 
 def send_verification_email(user_name, user_email, token):
-    verify_url = url_for('verify_email', token=token, _external=True)
+    try:
+        verify_url = url_for('verify_email', token=token, _external=True)
+    except Exception:
+        verify_url = f"/verify-email/{token}"
     subject = 'Verify your Healthy AI email'
     body = (
         f"Hello {user_name or 'there'},\n\n"
@@ -814,8 +817,12 @@ def index():
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
-        d = request.get_json()
+        d = request.get_json(silent=True) or {}
+        if not d:
+            d = {'email': request.form.get('email'), 'password': request.form.get('password')}
         email, password = d.get('email'), d.get('password')
+        if not email or not password:
+            return jsonify({'success': False, 'msg': 'Email and password are required.'})
         with get_db() as db:
             user = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
         if user and user['provider'] == 'local' and not int(user['email_verified'] or 0):
@@ -830,8 +837,16 @@ def login():
 @app.route('/register', methods=['GET','POST'])
 def register():
     if request.method == 'POST':
-        d = request.get_json()
+        d = request.get_json(silent=True) or {}
+        if not d:
+            d = {
+                'name': request.form.get('name'),
+                'email': request.form.get('email'),
+                'password': request.form.get('password'),
+            }
         name, email, password = d.get('name'), d.get('email'), d.get('password')
+        if not name or not email or not password:
+            return jsonify({'success': False, 'msg': 'Name, email and password are required.'})
         try:
             with get_db() as db:
                 user = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
@@ -860,10 +875,16 @@ def register():
                     )
                     user_id = db.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()['id']
                 db.commit()
-                send_verification_email(name, email, token)
-            return jsonify({'success': True, 'requires_verification': True, 'name': name, 'msg': 'Verification email sent. Check your inbox and click the link to activate your account.'})
+                try:
+                    send_verification_email(name, email, token)
+                except Exception as mail_err:
+                    print(f"Verification email failed (non-fatal): {mail_err}")
+            return jsonify({'success': True, 'requires_verification': True, 'name': name, 'msg': 'Account created! Check your inbox for the verification link to activate your account.'})
         except sqlite3.IntegrityError:
             return jsonify({'success': False, 'msg': 'Email already registered'})
+        except Exception as exc:
+            print(f"Registration error: {exc}")
+            return jsonify({'success': False, 'msg': 'Registration failed. Please try again.'}), 500
     return render_template('login.html')
 
 
