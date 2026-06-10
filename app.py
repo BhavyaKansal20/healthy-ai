@@ -369,12 +369,38 @@ def upsert_oauth_user(provider, provider_id, name, email, avatar_url=None, email
 
 def send_smtp_email(to_email, subject, body, attachment_path=None, attachment_name=None):
     smtp_host = os.environ.get('SMTP_HOST')
-    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+    smtp_port_raw = os.environ.get('SMTP_PORT', '587')
     smtp_username = os.environ.get('SMTP_USERNAME')
     smtp_password = os.environ.get('SMTP_PASSWORD')
     from_email = os.environ.get('FROM_EMAIL', smtp_username)
 
+    print("[SMTP DEBUG] Starting email sending routine...")
+    print(f"[SMTP DEBUG] SMTP_HOST: {smtp_host!r}")
+    print(f"[SMTP DEBUG] SMTP_PORT: {smtp_port_raw!r}")
+    print(f"[SMTP DEBUG] SMTP_USERNAME: {smtp_username!r}")
+    print(f"[SMTP DEBUG] SMTP_PASSWORD is set: {bool(smtp_password)}")
+    print(f"[SMTP DEBUG] FROM_EMAIL: {from_email!r}")
+    print(f"[SMTP DEBUG] to_email: {to_email!r}")
+
+    if not smtp_host:
+        print("[SMTP DEBUG] FAILURE: SMTP_HOST env var is missing.")
+    if not smtp_username:
+        print("[SMTP DEBUG] FAILURE: SMTP_USERNAME env var is missing.")
+    if not smtp_password:
+        print("[SMTP DEBUG] FAILURE: SMTP_PASSWORD env var is missing.")
+    if not from_email:
+        print("[SMTP DEBUG] FAILURE: FROM_EMAIL is missing.")
+    if not to_email:
+        print("[SMTP DEBUG] FAILURE: Recipient email is missing.")
+
     if not all([smtp_host, smtp_username, smtp_password, from_email, to_email]):
+        print("[SMTP DEBUG] FAILURE: Aborting SMTP email send because required details are missing.")
+        return False
+
+    try:
+        smtp_port = int(smtp_port_raw)
+    except ValueError as e:
+        print(f"[SMTP DEBUG] FAILURE: Invalid SMTP_PORT {smtp_port_raw!r}: {e}")
         return False
 
     msg = EmailMessage()
@@ -388,21 +414,30 @@ def send_smtp_email(to_email, subject, body, attachment_path=None, attachment_na
             msg.add_attachment(f.read(), maintype='application', subtype='pdf', filename=attachment_name or os.path.basename(attachment_path))
 
     try:
+        print(f"[SMTP DEBUG] Connecting to SMTP server {smtp_host}:{smtp_port} with 20s timeout...")
         with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+            print("[SMTP DEBUG] Connection established. Starting TLS...")
             server.starttls()
+            print("[SMTP DEBUG] TLS started. Logging in...")
             server.login(smtp_username, smtp_password)
+            print("[SMTP DEBUG] Logged in. Sending message...")
             server.send_message(msg)
+            print("[SMTP DEBUG] Message sent successfully!")
         return True
     except Exception as exc:
-        print(f"Email send failed: {exc}")
+        print(f"[SMTP DEBUG] FAILURE: SMTP send failed with exception: {exc}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
-def send_verification_email(user_name, user_email, token):
-    try:
-        verify_url = url_for('verify_email', token=token, _external=True)
-    except Exception:
-        verify_url = f"/verify-email/{token}"
+def send_verification_email(user_name, user_email, token, verify_url=None):
+    if not verify_url:
+        try:
+            verify_url = url_for('verify_email', token=token, _external=True)
+        except Exception as e:
+            print(f"[SMTP DEBUG] url_for failed in send_verification_email: {e}")
+            verify_url = f"/verify-email/{token}"
     subject = 'Verify your Healthy AI email'
     body = (
         f"Hello {user_name or 'there'},\n\n"
@@ -425,7 +460,19 @@ def issue_email_verification(db, user_id, user_name, user_email):
         (token, expires_at, user_id)
     )
     db.commit()
-    send_verification_email(user_name, user_email, token)
+    
+    # Try to generate verify_url inside request context
+    try:
+        verify_url = url_for('verify_email', token=token, _external=True)
+    except Exception as e:
+        print(f"[SMTP DEBUG] Could not pre-generate verify_url in issue_email_verification: {e}")
+        verify_url = None
+
+    threading.Thread(
+        target=send_verification_email,
+        args=(user_name, user_email, token, verify_url),
+        daemon=True
+    ).start()
     return token
 
 
@@ -875,10 +922,23 @@ def register():
                     )
                     user_id = db.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()['id']
                 db.commit()
+                
+                # Pre-generate verify_url in request context
                 try:
-                    send_verification_email(name, email, token)
-                except Exception as mail_err:
-                    print(f"Verification email failed (non-fatal): {mail_err}")
+                    verify_url = url_for('verify_email', token=token, _external=True)
+                except Exception as e:
+                    print(f"[SMTP DEBUG] Could not pre-generate verify_url in register route: {e}")
+                    verify_url = None
+
+                try:
+                    print(f"[SMTP DEBUG] Spawning background thread to send verification email to {email}")
+                    threading.Thread(
+                        target=send_verification_email,
+                        args=(name, email, token, verify_url),
+                        daemon=True
+                    ).start()
+                except Exception as thread_err:
+                    print(f"[SMTP DEBUG] Failed to spawn email thread: {thread_err}")
             return jsonify({'success': True, 'requires_verification': True, 'name': name, 'msg': 'Account created! Check your inbox for the verification link to activate your account.'})
         except sqlite3.IntegrityError:
             return jsonify({'success': False, 'msg': 'Email already registered'})
