@@ -75,6 +75,7 @@ oauth.register(
     client_id=os.environ.get('GOOGLE_CLIENT_ID'),
     client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    api_base_url='https://openidconnect.googleapis.com/v1/',
     client_kwargs={'scope': 'openid email profile'},
 )
 
@@ -743,19 +744,9 @@ def oauth_callback(provider):
         user = None
 
         if provider == 'google':
-            profile = None
-            try:
-                profile = client.parse_id_token(token)
-            except Exception as parse_error:
-                print(f"Google id_token parse failed: {parse_error}")
-            if not profile:
-                try:
-                    response = client.get('userinfo')
-                    response.raise_for_status()
-                    profile = response.json()
-                except Exception as userinfo_error:
-                    print(f"Google userinfo fetch failed: {userinfo_error}")
-                    raise
+            response = client.get('userinfo')
+            response.raise_for_status()
+            profile = response.json()
 
             user = upsert_oauth_user(
                 provider='google',
