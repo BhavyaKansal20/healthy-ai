@@ -3,12 +3,14 @@ Healthy AI - Flask Web Application
 Heart Disease & Diabetes Prediction Platform
 """
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
+from authlib.integrations.flask_client import OAuth
 from reportlab.platypus import Image
-import sqlite3, hashlib, json, os, io, base64, re
+import sqlite3, hashlib, json, os, io, base64, re, secrets
 import threading
 from datetime import datetime
 import joblib, numpy as np
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
@@ -59,7 +61,26 @@ def _ensure_torch_modules():
         return False
 
 app = Flask(__name__)
-app.secret_key = 'healthyai_secret_2026_secure'
+app.secret_key = os.environ.get('SECRET_KEY', 'healthyai_secret_2026_secure')
+oauth = OAuth(app)
+
+oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'},
+)
+
+oauth.register(
+    name='github',
+    client_id=os.environ.get('GITHUB_CLIENT_ID'),
+    client_secret=os.environ.get('GITHUB_CLIENT_SECRET'),
+    access_token_url='https://github.com/login/oauth/access_token',
+    authorize_url='https://github.com/login/oauth/authorize',
+    api_base_url='https://api.github.com/',
+    client_kwargs={'scope': 'read:user user:email'},
+)
 
 BASE        = os.path.dirname(__file__)
 MODELS_DIR  = os.path.join(BASE, 'models')
@@ -242,6 +263,10 @@ def init_db():
             name TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
+            provider TEXT NOT NULL DEFAULT 'local',
+            provider_id TEXT,
+            avatar_url TEXT,
+            email_verified INTEGER NOT NULL DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )''')
         db.execute('''CREATE TABLE IF NOT EXISTS reports (
@@ -259,12 +284,87 @@ def init_db():
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id)
         )''')
+        columns = {row['name'] for row in db.execute('PRAGMA table_info(users)').fetchall()}
+        alter_statements = []
+        if 'provider' not in columns:
+            alter_statements.append("ALTER TABLE users ADD COLUMN provider TEXT NOT NULL DEFAULT 'local'")
+        if 'provider_id' not in columns:
+            alter_statements.append('ALTER TABLE users ADD COLUMN provider_id TEXT')
+        if 'avatar_url' not in columns:
+            alter_statements.append('ALTER TABLE users ADD COLUMN avatar_url TEXT')
+        if 'email_verified' not in columns:
+            alter_statements.append('ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0')
+        for stmt in alter_statements:
+            db.execute(stmt)
+        db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider_identity ON users(provider, provider_id)')
         db.commit()
 
 init_db()
 
-def hash_pw(pw): return hashlib.sha256(pw.encode()).hexdigest()
+def hash_pw(pw): return generate_password_hash(pw)
 def logged_in(): return 'user_id' in session
+
+def verify_pw(stored_pw, candidate_pw):
+    if not stored_pw or not candidate_pw:
+        return False
+    if stored_pw.startswith(('pbkdf2:', 'scrypt:', 'argon2:')):
+        return check_password_hash(stored_pw, candidate_pw)
+    if re.fullmatch(r'[a-f0-9]{64}', stored_pw):
+        return hashlib.sha256(candidate_pw.encode()).hexdigest() == stored_pw
+    return check_password_hash(stored_pw, candidate_pw)
+
+def upsert_oauth_user(provider, provider_id, name, email, avatar_url=None, email_verified=False):
+    if not email:
+        return None
+    with get_db() as db:
+        user = db.execute(
+            'SELECT * FROM users WHERE provider=? AND provider_id=?',
+            (provider, provider_id)
+        ).fetchone()
+        if user is None:
+            user = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+        if user:
+            db.execute(
+                '''UPDATE users
+                   SET name=?, email=?, provider=?, provider_id=?, avatar_url=?, email_verified=?
+                   WHERE id=?''',
+                (name or user['name'], email, provider, provider_id, avatar_url, int(bool(email_verified)), user['id'])
+            )
+            db.commit()
+            return db.execute('SELECT * FROM users WHERE id=?', (user['id'],)).fetchone()
+
+        db.execute(
+            '''INSERT INTO users (name, email, password, provider, provider_id, avatar_url, email_verified)
+               VALUES (?,?,?,?,?,?,?)''',
+            (
+                name or email.split('@')[0],
+                email,
+                generate_password_hash(secrets.token_urlsafe(32)),
+                provider,
+                provider_id,
+                avatar_url,
+                int(bool(email_verified)),
+            )
+        )
+        db.commit()
+        return db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+
+
+def _get_github_email(client):
+    try:
+        emails = client.get('user/emails').json()
+    except Exception:
+        emails = []
+    for item in emails:
+        if item.get('primary') and item.get('verified'):
+            return item.get('email'), True
+    for item in emails:
+        if item.get('verified'):
+            return item.get('email'), True
+    for item in emails:
+        if item.get('email'):
+            return item.get('email'), bool(item.get('verified'))
+    return None, False
 
 def fig_to_b64(fig):
     _ensure_matplotlib()
@@ -586,9 +686,8 @@ def login():
         d = request.get_json()
         email, password = d.get('email'), d.get('password')
         with get_db() as db:
-            user = db.execute('SELECT * FROM users WHERE email=? AND password=?',
-                              (email, hash_pw(password))).fetchone()
-        if user:
+            user = db.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+        if user and verify_pw(user['password'], password):
             session['user_id']   = user['id']
             session['user_name'] = user['name']
             return jsonify({'success': True, 'name': user['name']})
@@ -617,6 +716,54 @@ def register():
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+
+@app.route('/auth/<provider>/login')
+def oauth_login(provider):
+    client = oauth.create_client(provider)
+    if client is None:
+        return redirect(url_for('index'))
+    redirect_uri = url_for('oauth_callback', provider=provider, _external=True)
+    return client.authorize_redirect(redirect_uri)
+
+
+@app.route('/auth/<provider>/callback')
+def oauth_callback(provider):
+    client = oauth.create_client(provider)
+    if client is None:
+        return redirect(url_for('index'))
+
+    client.authorize_access_token()
+    user = None
+
+    if provider == 'google':
+        profile = client.get('userinfo').json()
+        user = upsert_oauth_user(
+            provider='google',
+            provider_id=str(profile.get('sub')),
+            name=profile.get('name') or profile.get('email', '').split('@')[0],
+            email=profile.get('email'),
+            avatar_url=profile.get('picture'),
+            email_verified=profile.get('email_verified', False),
+        )
+    elif provider == 'github':
+        profile = client.get('user').json()
+        email, email_verified = _get_github_email(client)
+        user = upsert_oauth_user(
+            provider='github',
+            provider_id=str(profile.get('id')),
+            name=profile.get('name') or profile.get('login') or (email or 'GitHub User').split('@')[0],
+            email=email or profile.get('email'),
+            avatar_url=profile.get('avatar_url'),
+            email_verified=email_verified,
+        )
+
+    if not user:
+        return redirect(url_for('index'))
+
+    session['user_id'] = user['id']
+    session['user_name'] = user['name']
+    return redirect(url_for('dashboard'))
 
 @app.route('/dashboard')
 def dashboard():

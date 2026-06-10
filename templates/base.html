@@ -473,6 +473,13 @@
       <div class="form-group"><label>Email</label><input type="email" id="loginEmail" class="form-input" placeholder="you@example.com"></div>
       <div class="form-group"><label>Password</label><input type="password" id="loginPw" class="form-input" placeholder="••••••••"></div>
       <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+      <div style="display:flex;align-items:center;gap:12px;margin:18px 0;">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+        <span style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">or continue with</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.08);"></div>
+      </div>
+      <a href="/auth/google/login" class="btn btn-glass" style="width:100%;justify-content:center;margin-bottom:10px;"><i class="fab fa-google"></i> Continue with Google</a>
+      <a href="/auth/github/login" class="btn btn-glass" style="width:100%;justify-content:center;"><i class="fab fa-github"></i> Continue with GitHub</a>
       <p style="text-align:center;margin-top:16px;color:var(--muted);font-size:0.9rem;">
         No account? <a href="#" onclick="switchModal('loginModal','registerModal')" style="color:var(--cyan);">Create one</a>
       </p>
