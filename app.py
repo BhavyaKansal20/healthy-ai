@@ -9,6 +9,8 @@ import sqlite3, hashlib, json, os, io, base64, re, secrets
 import threading
 from datetime import datetime
 import joblib, numpy as np
+import smtplib
+from email.message import EmailMessage
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -679,6 +681,61 @@ def generate_pdf_report(report_type, patient_info, input_data, prediction, proba
     doc.build(story)
     return filename
 
+
+def _report_subject(report_type):
+    pretty = {
+        'heart': 'Heart Disease',
+        'diabetes': 'Diabetes',
+        'brain': 'Brain Tumor'
+    }.get(report_type, report_type.title())
+    return f"Here's your report of {pretty}"
+
+
+def maybe_email_report(user_email, report_type, pdf_filename, patient_name, report_id):
+    smtp_host = os.environ.get('SMTP_HOST')
+    smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+    smtp_username = os.environ.get('SMTP_USERNAME')
+    smtp_password = os.environ.get('SMTP_PASSWORD')
+    from_email = os.environ.get('FROM_EMAIL', smtp_username)
+
+    if not all([smtp_host, smtp_username, smtp_password, from_email, user_email]):
+        return False
+
+    pdf_path = os.path.join(REPORTS_DIR, pdf_filename)
+    if not os.path.exists(pdf_path):
+        return False
+
+    subject = _report_subject(report_type)
+    pretty = {
+        'heart': 'Heart Disease',
+        'diabetes': 'Diabetes',
+        'brain': 'Brain Tumor'
+    }.get(report_type, report_type.title())
+
+    msg = EmailMessage()
+    msg['From'] = from_email
+    msg['To'] = user_email
+    msg['Subject'] = subject
+    msg.set_content(
+        f"Hello {patient_name or 'User'},\n\n"
+        f'Your {pretty} report (Report ID: HAI-{report_id:06d}) is attached as a PDF.\n\n'
+        'You can also open it from the Reports section in Healthy AI.\n\n'
+        'Regards,\nHealthy AI'
+    )
+
+    with open(pdf_path, 'rb') as f:
+        msg.add_attachment(f.read(), maintype='application', subtype='pdf', filename=pdf_filename)
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+        return True
+    except Exception as exc:
+        print(f"Email send failed: {exc}")
+        return False
+
 @app.route('/')
 def index():
     user = None
@@ -843,6 +900,12 @@ def predict_heart():
         with get_db() as db:
             db.execute('UPDATE reports SET report_file=? WHERE id=?', (pdf_file, report_id))
             db.commit()
+            user_email = db.execute('SELECT email FROM users WHERE id=?', (session['user_id'],)).fetchone()['email']
+        threading.Thread(
+            target=maybe_email_report,
+            args=(user_email, 'heart', pdf_file, patient['name'], report_id),
+            daemon=True,
+        ).start()
         gauge = gauge_chart(prob, risk)
         return jsonify({
             'success': True, 'prediction': prediction_text, 'probability': round(prob*100, 1),
@@ -905,6 +968,12 @@ def predict_diabetes():
         with get_db() as db:
             db.execute('UPDATE reports SET report_file=? WHERE id=?', (pdf_file, report_id))
             db.commit()
+            user_email = db.execute('SELECT email FROM users WHERE id=?', (session['user_id'],)).fetchone()['email']
+        threading.Thread(
+            target=maybe_email_report,
+            args=(user_email, 'diabetes', pdf_file, patient['name'], report_id),
+            daemon=True,
+        ).start()
         gauge = gauge_chart(prob, risk)
         return jsonify({
             'success': True, 'prediction': prediction_text, 'probability': round(prob*100, 1),
@@ -1003,6 +1072,13 @@ def predict_brain():
             with get_db() as db:
                 db.execute('UPDATE reports SET report_file=? WHERE id=?', (pdf_file, report_id))
                 db.commit()
+                user_email = db.execute('SELECT email FROM users WHERE id=?', (session['user_id'],)).fetchone()['email']
+
+            threading.Thread(
+                target=maybe_email_report,
+                args=(user_email, 'brain', pdf_file, patient['name'], report_id),
+                daemon=True,
+            ).start()
 
             gauge = gauge_chart(tumor_prob, risk)
             return jsonify({

@@ -108,6 +108,70 @@
     color: white !important; padding: 8px 20px; border-radius: 50px;
     font-weight: 600;
   }
+  .user-menu {
+    position: relative;
+  }
+  .user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px 6px 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+  .user-chip:hover { background: rgba(255,255,255,0.09); }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    display: block;
+    flex: 0 0 auto;
+  }
+  .user-avatar-fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: white;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    flex: 0 0 auto;
+  }
+  .user-menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    min-width: 220px;
+    padding: 10px;
+    border-radius: 18px;
+    background: rgba(8,10,24,0.96);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+    display: none;
+  }
+  .user-menu.open .user-menu-panel { display: block; }
+  .user-menu-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 0.92rem;
+  }
+  .user-menu-link:hover {
+    background: rgba(255,255,255,0.06);
+  }
   main { padding-top: 80px; min-height: 100vh; }
   .btn {
     display: inline-flex; align-items: center; gap: 8px; justify-content: center;
@@ -451,7 +515,25 @@
       <a href="/predict/diabetes" {% if '/diabetes' in request.path %}class="active"{% endif %}><i class="fas fa-syringe"></i> Diabetes</a>
       <a href="/predict/brain" {% if '/brain' in request.path %}class="active"{% endif %}><i class="fas fa-brain"></i> Brain</a>
       <a href="/reports" {% if request.path == '/reports' %}class="active"{% endif %}><i class="fas fa-file-medical"></i> Reports</a>
-      <a href="/logout" class="btn-nav btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      <div class="user-menu">
+        <div class="user-chip" onclick="toggleUserMenu(event)">
+          {% if user.avatar_url %}
+            <img src="{{ user.avatar_url }}" alt="{{ user.name }}" class="user-avatar">
+          {% else %}
+            <span class="user-avatar-fallback">{{ user.name[0]|upper if user.name else 'U' }}</span>
+          {% endif %}
+          <div style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;">
+            <span style="font-size:0.86rem;font-weight:700;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ user.name }}</span>
+            <span style="font-size:0.72rem;color:var(--muted);">Signed in</span>
+          </div>
+          <i class="fas fa-chevron-down" style="font-size:0.75rem;color:var(--muted);"></i>
+        </div>
+        <div class="user-menu-panel">
+          <a href="/dashboard" class="user-menu-link"><i class="fas fa-chart-line"></i> Dashboard</a>
+          <a href="/reports" class="user-menu-link"><i class="fas fa-file-medical"></i> Reports</a>
+          <a href="/logout" class="user-menu-link" style="color:var(--red);"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+      </div>
     {% else %}
       <a href="/" {% if request.path == '/' %}class="active"{% endif %}>Home</a>
       <a href="#features">Features</a>
@@ -609,6 +691,15 @@
 <main>{% block content %}{% endblock %}</main>
 
 <script>
+function toggleUserMenu(event) {
+  event.stopPropagation();
+  const menu = event.currentTarget.closest('.user-menu');
+  document.querySelectorAll('.user-menu.open').forEach(el => {
+    if (el !== menu) el.classList.remove('open');
+  });
+  menu.classList.toggle('open');
+}
+
 function openModal(id) {
   const m = document.getElementById(id);
   m.style.display = 'flex';
@@ -662,6 +753,10 @@ document.addEventListener('keydown', e => {
     ['loginModal','registerModal'].forEach(closeModal);
     closeFeedback();
   }
+});
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.user-menu.open').forEach(el => el.classList.remove('open'));
 });
 
 let fbRating   = 0;
