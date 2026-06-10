@@ -67,6 +67,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'healthyai_secret_2026_secure')
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 if os.environ.get('RENDER'):
     app.config['PREFERRED_URL_SCHEME'] = 'https'
+    app.config['SESSION_COOKIE_SECURE'] = True
 oauth = OAuth(app)
 
 oauth.register(
@@ -737,38 +738,54 @@ def oauth_callback(provider):
     client = oauth.create_client(provider)
     if client is None:
         return redirect(url_for('index'))
+    try:
+        token = client.authorize_access_token()
+        user = None
 
-    client.authorize_access_token()
-    user = None
+        if provider == 'google':
+            profile = None
+            try:
+                profile = client.parse_id_token(token)
+            except Exception as parse_error:
+                print(f"Google id_token parse failed: {parse_error}")
+            if not profile:
+                try:
+                    response = client.get('userinfo')
+                    response.raise_for_status()
+                    profile = response.json()
+                except Exception as userinfo_error:
+                    print(f"Google userinfo fetch failed: {userinfo_error}")
+                    raise
 
-    if provider == 'google':
-        profile = client.get('userinfo').json()
-        user = upsert_oauth_user(
-            provider='google',
-            provider_id=str(profile.get('sub')),
-            name=profile.get('name') or profile.get('email', '').split('@')[0],
-            email=profile.get('email'),
-            avatar_url=profile.get('picture'),
-            email_verified=profile.get('email_verified', False),
-        )
-    elif provider == 'github':
-        profile = client.get('user').json()
-        email, email_verified = _get_github_email(client)
-        user = upsert_oauth_user(
-            provider='github',
-            provider_id=str(profile.get('id')),
-            name=profile.get('name') or profile.get('login') or (email or 'GitHub User').split('@')[0],
-            email=email or profile.get('email'),
-            avatar_url=profile.get('avatar_url'),
-            email_verified=email_verified,
-        )
+            user = upsert_oauth_user(
+                provider='google',
+                provider_id=str(profile.get('sub')),
+                name=profile.get('name') or profile.get('email', '').split('@')[0],
+                email=profile.get('email'),
+                avatar_url=profile.get('picture'),
+                email_verified=profile.get('email_verified', False),
+            )
+        elif provider == 'github':
+            profile = client.get('user').json()
+            email, email_verified = _get_github_email(client)
+            user = upsert_oauth_user(
+                provider='github',
+                provider_id=str(profile.get('id')),
+                name=profile.get('name') or profile.get('login') or (email or 'GitHub User').split('@')[0],
+                email=email or profile.get('email'),
+                avatar_url=profile.get('avatar_url'),
+                email_verified=email_verified,
+            )
 
-    if not user:
-        return redirect(url_for('index'))
+        if not user:
+            return redirect(url_for('index'))
 
-    session['user_id'] = user['id']
-    session['user_name'] = user['name']
-    return redirect(url_for('dashboard'))
+        session['user_id'] = user['id']
+        session['user_name'] = user['name']
+        return redirect(url_for('dashboard'))
+    except Exception as exc:
+        app.logger.exception('OAuth callback failed for %s', provider)
+        return render_template('login.html', oauth_error=f'{provider.title()} sign-in failed: {exc}'), 500
 
 @app.route('/dashboard')
 def dashboard():
