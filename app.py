@@ -11,6 +11,7 @@ from datetime import datetime
 import joblib, numpy as np
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, cm
@@ -62,6 +63,10 @@ def _ensure_torch_modules():
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'healthyai_secret_2026_secure')
+# Trust reverse proxy headers so external callback URLs use the public scheme/host.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+if os.environ.get('RENDER'):
+    app.config['PREFERRED_URL_SCHEME'] = 'https'
 oauth = OAuth(app)
 
 oauth.register(
