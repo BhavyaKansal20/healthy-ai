@@ -5,7 +5,9 @@ Heart Disease & Diabetes Prediction Platform
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_file
 from authlib.integrations.flask_client import OAuth
 from reportlab.platypus import Image
-import sqlite3, hashlib, json, os, io, base64, re, secrets
+import sqlite3, hashlib, json, os, io, base64, re, secrets, sys
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
 import threading
 from datetime import datetime, timedelta
 import joblib, numpy as np
