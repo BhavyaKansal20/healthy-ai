@@ -43,11 +43,11 @@
 
 <div align="center">
 
-| 🫀 Heart Disease | 💉 Diabetes | 🧠 Brain Tumor | 📄 PDF Reports | 🔐 Auth System |
+| 🫀 Heart Disease | 💉 Diabetes | 🧠 Brain Tumor | 📄 PDF Reports | 🔐 Security & Auth |
 |:---:|:---:|:---:|:---:|:---:|
-| Gradient Boosting | Gradient Boosting | EfficientNet-B0 | Auto-Generated | SHA-256 Hashed |
-| 83.7% Accuracy | 97.2% Accuracy | MRI Classification | Downloadable | Session Auth |
-| 3,600 records | 100,000 records | Multi-class MRI data | Risk Gauge | Private Reports |
+| Gradient Boosting | Gradient Boosting | EfficientNet-B0 | Auto-Generated | Google & GitHub OAuth |
+| 83.7% Accuracy | 97.2% Accuracy | MRI Classification | Downloadable & Emailed | Scrypt/Argon2/Legacy |
+| 3,600 records | 100,000 records | Multi-class MRI data | Risk Gauge | Email Verified (Brevo) |
 
 </div>
 
@@ -299,6 +299,42 @@ Every prediction triggers auto-generation of a professional medical report:
 
 </details>
 
+<details>
+<summary><b>🔐 Advanced Auth & Social Sign-In</b> — click to expand</summary>
+
+<br>
+
+Secure authentication system integration supporting:
+- **OAuth 2.0 Integration:** Quick sign-in with **Google** and **GitHub** credentials.
+- **Robust Passwords:** Passwords hashed using modern `scrypt` and `pbkdf2` algorithms, with full backwards-compatibility for legacy accounts.
+- **Navbar Integration:** Displays signed-in user's name and avatar dynamically.
+
+</details>
+
+<details>
+<summary><b>✉️ Email Verification & Notifications</b> — click to expand</summary>
+
+<br>
+
+Reliable email verification workflow built with:
+- **Token Verification:** Unique verification token generated and set to expire in 24 hours.
+- **Asynchronous Mail:** Verification emails sent in background threads to avoid blocking UI routes.
+- **Brevo SMTP Gateway:** Routed securely through Brevo SMTP using custom port 2525.
+
+</details>
+
+<details>
+<summary><b>📧 PDF Report Auto-Emailing</b> — click to expand</summary>
+
+<br>
+
+Automatic delivery of prediction diagnostics:
+- **Background Delivery:** Spawns a background thread immediately after a prediction.
+- **PDF Attachment:** Attaches the auto-generated ReportLab PDF report directly to the email.
+- **Direct to Inbox:** Delivers patient risk analysis and personalized medical tips straight to the user's registered email address.
+
+</details>
+
 ---
 
 <br>
@@ -428,7 +464,9 @@ python app.py
 | **Database** | ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white) | Users, reports, feedback |
 | **PDF** | ![ReportLab](https://img.shields.io/badge/ReportLab-CC0000?style=flat-square) | Auto PDF generation |
 | **Analytics** | ![Matplotlib](https://img.shields.io/badge/Matplotlib-11557c?style=flat-square&logo=python&logoColor=white) | EDA charts & plots |
-| **Security** | ![SHA-256](https://img.shields.io/badge/SHA--256-333?style=flat-square) | Password hashing |
+| **Security & OAuth** | ![Authlib](https://img.shields.io/badge/Authlib-1.7-blue?style=flat-square) | Google & GitHub OAuth Integration |
+| **Password Hashing** | ![scrypt](https://img.shields.io/badge/scrypt-Hash-333?style=flat-square) / ![pbkdf2](https://img.shields.io/badge/pbkdf2-Hash-333?style=flat-square) | Secure credential storage |
+| **Email Relay** | ![Brevo SMTP](https://img.shields.io/badge/Brevo_SMTP-Port_2525-06d6a0?style=flat-square) | Async verification & report emailing |
 | **Deployment** | ![Render](https://img.shields.io/badge/Render-46E3B7?style=flat-square&logo=render&logoColor=white) | Cloud hosting |
 
 </div>
@@ -440,18 +478,22 @@ python app.py
 ## 🔐 Security Architecture
 
 ```
-  USER PASSWORD
-       │
-       ▼
-  SHA-256 Hash ──────► Stored in SQLite (never plain text)
-       
+  REGISTRATION / AUTHENTICATION METHODS
+   │
+   ├─► Local Signup ────► Email Verification Token ──► Sent via Brevo SMTP (Port 2525)
+   │                      Password Hashed (scrypt/pbkdf2/argon2) ──► Saved to SQLite
+   │
+   └─► Social Login ────► Authlib OAuth 2.0 ──► Google / GitHub API Callback
+                          
   LOGIN REQUEST
-       │
-       ├─► Hash & Compare ──► ✅ Match → Session Created
-       │                      ❌ Mismatch → 401 Denied
-       │
-       └─► Flask Session ──► Secure cookie (server-side)
-                              Every private route validates session
+   │
+   ├─► Local Login ─────► verify_password() (supports scrypt, pbkdf2, argon2, & legacy SHA-256)
+   │                      ✅ Match ──► Session Created (Secure cookie)
+   │                      ❌ Mismatch ──► 401 Denied
+   │
+   ├─► OAuth Login ─────► Validates access token and payload via Provider API
+   │
+   └─► Session Auth ────► Flask Session validation on every private/protected route
 ```
 
 ---
